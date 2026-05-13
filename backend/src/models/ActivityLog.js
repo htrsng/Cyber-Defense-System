@@ -1,0 +1,36 @@
+const mongoose = require('mongoose');
+
+const activityLogSchema = new mongoose.Schema({
+  eventType: {
+    type: String,
+    enum: [
+      'LOGIN_SUCCESS', 'LOGIN_FAILED', 'LOGOUT',
+      'REGISTER', 'PASSWORD_CHANGE',
+      'RATE_LIMIT_HIT', 'IP_BLOCKED', 'IP_UNBLOCKED',
+      'HONEYPOT_TRIGGERED',
+      'ATTACK_SIM_BRUTE_FORCE', 'ATTACK_SIM_SQLI', 'ATTACK_SIM_HONEYPOT',
+      'SUSPICIOUS_ACTIVITY', 'ANOMALY_DETECTED',
+    ],
+    required: true,
+  },
+  userId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  ipAddress: { type: String, required: true },
+  userAgent: { type: String, default: '' },
+  endpoint:  { type: String, default: '' },
+  method:    { type: String, default: '' },
+
+  // Payload linh hoạt theo từng loại event — lợi thế của MongoDB
+  metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
+
+  // AI risk score tại thời điểm event xảy ra
+  riskScore:   { type: Number, min: 0, max: 100, default: 0 },
+  riskReasons: [{ type: String }],
+
+  severity: {
+    type: String,
+    enum: ['info', 'low', 'medium', 'high', 'critical'],
+    default: 'info',
+  },
+}, { timestamps: true });
+
+module.exports = mongoose.model('ActivityLog', activityLogSchema);
