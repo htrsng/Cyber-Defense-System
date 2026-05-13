@@ -92,24 +92,24 @@ export default function OverviewPage({ liveAlerts, recentLogs }) {
             {/* ── Stat tiles ── */}
             <div className="stat-grid">
                 <div className="stat-tile cyan">
-                    <div className="stat-label">Total Events (24h)</div>
+                    <div className="stat-label">Tổng số Events (24h)</div>
                     <div className="stat-value">{stats?.last24h?.totalEvents ?? '—'}</div>
-                    <div className="stat-sub">↑ 12% from yesterday</div>
+                    <div className="stat-sub">↑ 12% so với hôm qua</div>
                 </div>
                 <div className="stat-tile red">
                     <div className="stat-label">Critical Threats</div>
                     <div className="stat-value">{stats?.last24h?.criticalEvents ?? '—'}</div>
-                    <div className="stat-sub">Unresolved active threats</div>
+                    <div className="stat-sub">Chưa xử lý trong trạng thái active</div>
                 </div>
                 <div className="stat-tile amber">
                     <div className="stat-label">Unresolved Events</div>
                     <div className="stat-value">{stats?.unresolvedThreats ?? '—'}</div>
-                    <div className="stat-sub">Pending review</div>
+                    <div className="stat-sub">Chờ review</div>
                 </div>
                 <div className="stat-tile green">
                     <div className="stat-label">IPs Monitored</div>
                     <div className="stat-value">{topIPs.length || '—'}</div>
-                    <div className="stat-sub">Active in last hour</div>
+                    <div className="stat-sub">Hoạt động trong 1 giờ gần nhất</div>
                 </div>
             </div>
 
@@ -119,7 +119,7 @@ export default function OverviewPage({ liveAlerts, recentLogs }) {
                 {/* Event timeline */}
                 <div className="card span-2">
                     <div className="card-header">
-                        <span className="card-title">Event Timeline — Last 24 Hours</span>
+                        <span className="card-title">Event Timeline — 24 giờ gần nhất</span>
                     </div>
                     <ResponsiveContainer width="100%" height={180}>
                         <AreaChart data={timeData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
@@ -174,7 +174,7 @@ export default function OverviewPage({ liveAlerts, recentLogs }) {
                         <span className="card-title">Top Risk IPs</span>
                     </div>
                     {topIPs.length === 0 ? (
-                        <div className="empty-state">No high-risk IPs detected</div>
+                        <div className="empty-state">Chưa phát hiện IP có risk cao</div>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                             {topIPs.slice(0, 5).map((item, i) => (

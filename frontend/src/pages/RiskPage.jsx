@@ -64,7 +64,7 @@ export default function RiskPage({ topIPs }) {
             {/* IP Lookup */}
             <div className="card" style={{ marginBottom: 20 }}>
                 <div className="card-header">
-                    <span className="card-title">Lookup IP Address</span>
+                    <span className="card-title">Tra cứu IP Address</span>
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
                     <input
@@ -81,7 +81,7 @@ export default function RiskPage({ topIPs }) {
                         }}
                     />
                     <button className="btn btn-primary" onClick={lookup} disabled={loading}>
-                        {loading ? 'ANALYZING...' : '▶ ANALYZE'}
+                        {loading ? 'ĐANG PHÂN TÍCH...' : '▶ PHÂN TÍCH'}
                     </button>
                 </div>
                 {error && <div style={{ color: 'var(--red)', fontFamily: 'var(--font-mono)', fontSize: 12, marginTop: 10 }}>{error}</div>}
@@ -118,7 +118,7 @@ export default function RiskPage({ topIPs }) {
                                 </div>
                             ) : (
                                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--green)' }}>
-                                    ✓ No suspicious rules triggered
+                                    ✓ Không có suspicious rules nào được kích hoạt
                                 </div>
                             )}
                             {result.signals && (
@@ -142,11 +142,11 @@ export default function RiskPage({ topIPs }) {
                     <span className="card-title">Top Risky IPs (Live)</span>
                     <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }}
                         onClick={() => riskAPI.getTopIPs().then(r => { }).catch(() => { })}>
-                        ↻ REFRESH
+                        ↻ LÀM MỚI
                     </button>
                 </div>
                 {topIPs.length === 0 ? (
-                    <div className="empty-state">No high-risk IPs in the last hour</div>
+                    <div className="empty-state">Không có IP risk cao trong 1 giờ gần nhất</div>
                 ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
                         <thead>

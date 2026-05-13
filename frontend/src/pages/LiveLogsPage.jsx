@@ -63,7 +63,7 @@ export default function LiveLogsPage({ logs }) {
                 </div>
                 <input
                     type="text"
-                    placeholder="Filter by IP or event..."
+                    placeholder="Lọc theo IP hoặc event..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     style={{
@@ -96,7 +96,7 @@ export default function LiveLogsPage({ logs }) {
             <div className="log-feed">
                 {visible.length === 0 ? (
                     <div className="empty-state">
-                        {logs.length === 0 ? 'Waiting for events...' : 'No events match filter'}
+                        {logs.length === 0 ? 'Đang chờ sự kiện...' : 'Không có event nào khớp bộ lọc'}
                     </div>
                 ) : (
                     visible.map((entry, i) => (

@@ -47,7 +47,7 @@ function AppInner() {
             <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)' }}>
                 <div className="connecting">
                     <div className="dot online" />
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>INITIALIZING SYSTEM...</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>ĐANG KHỞI TẠO HỆ THỐNG...</span>
                 </div>
             </div>
         );
@@ -64,7 +64,7 @@ function AppInner() {
             case 'threats': return (
                 <div>
                     <div className="section-title">◎ ACTIVE THREATS</div>
-                    <div className="empty-state">Threat management view — connect to backend to view security events</div>
+                    <div className="empty-state">Giao diện quản lý Threats — kết nối backend để xem Security Events</div>
                 </div>
             );
             default: return null;

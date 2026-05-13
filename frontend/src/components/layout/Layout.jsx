@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 
 const NAV = [
-    { icon: '⬡', label: 'Overview', path: 'overview' },
+    { icon: '⬡', label: 'Tổng quan', path: 'overview' },
     { icon: '◈', label: 'Live Logs', path: 'logs' },
     { icon: '◎', label: 'Threats', path: 'threats' },
-    { icon: '◇', label: 'Risk Scores', path: 'risk' },
+    { icon: '◇', label: 'Risk Score', path: 'risk' },
     { icon: '⚡', label: 'Simulate', path: 'simulate' },
 ];
 
@@ -26,25 +26,25 @@ export default function Layout({ currentPage, onNavigate, children, liveAlerts =
                     </span>
                     <span style={{ color: 'var(--border)', fontSize: 20 }}>│</span>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.08em' }}>
-                        AI THREAT MONITORING SYSTEM
+                        HỆ THỐNG AI THREAT MONITORING
                     </span>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                     {liveAlerts > 0 && (
                         <span className="badge critical">
-                            ⚠ {liveAlerts} ACTIVE ALERT{liveAlerts > 1 ? 'S' : ''}
+                            ⚠ {liveAlerts} CẢNH BÁO ĐANG HOẠT ĐỘNG
                         </span>
                     )}
                     <div className="connecting">
                         <div className={`dot ${socketOnline ? 'online' : 'offline'}`} />
-                        <span>{socketOnline ? 'LIVE' : 'OFFLINE'}</span>
+                        <span>{socketOnline ? 'TRỰC TUYẾN' : 'NGOẠI TUYẾN'}</span>
                     </div>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)' }}>
                         {user?.email || 'admin@cyberdef'}
                     </span>
                     <button className="btn btn-ghost" onClick={logout} style={{ padding: '5px 12px' }}>
-                        LOGOUT
+                        ĐĂNG XUẤT
                     </button>
                 </div>
             </header>
@@ -53,7 +53,7 @@ export default function Layout({ currentPage, onNavigate, children, liveAlerts =
             <aside className="sidebar">
                 <div style={{ padding: '8px 20px 16px', borderBottom: '1px solid var(--border)', marginBottom: 8 }}>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.1em' }}>
-                        NAVIGATION
+                        ĐIỀU HƯỚNG
                     </div>
                 </div>
 
@@ -72,7 +72,7 @@ export default function Layout({ currentPage, onNavigate, children, liveAlerts =
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', lineHeight: 1.8 }}>
                         <div>NODE.JS + EXPRESS</div>
                         <div>MONGODB + REDIS</div>
-                        <div style={{ color: 'var(--cyan)' }}>● SYSTEM OPERATIONAL</div>
+                        <div style={{ color: 'var(--cyan)' }}>● HỆ THỐNG ĐANG HOẠT ĐỘNG</div>
                     </div>
                 </div>
             </aside>

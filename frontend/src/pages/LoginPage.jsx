@@ -49,7 +49,7 @@ export default function LoginPage() {
                         ◈ CYBERDEF
                     </div>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.15em' }}>
-                        AI THREAT MONITORING SYSTEM
+                        HỆ THỐNG AI THREAT MONITORING
                     </div>
                 </div>
 
@@ -60,7 +60,7 @@ export default function LoginPage() {
                         letterSpacing: '0.1em', color: 'var(--text-muted)',
                         marginBottom: 24, textTransform: 'uppercase',
                     }}>
-                        Authenticate
+                        Xác thực
                     </div>
 
                     <form onSubmit={handleSubmit}>
@@ -89,13 +89,13 @@ export default function LoginPage() {
                         <button type="submit" className="btn btn-primary"
                             style={{ width: '100%', justifyContent: 'center', padding: '10px', fontSize: 14 }}
                             disabled={loading}>
-                            {loading ? '⟳ AUTHENTICATING...' : '▶ ACCESS SYSTEM'}
+                            {loading ? '⟳ ĐANG XÁC THỰC...' : '▶ TRUY CẬP HỆ THỐNG'}
                         </button>
                     </form>
                 </div>
 
                 <div style={{ textAlign: 'center', marginTop: 20, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)' }}>
-                    All access attempts are monitored and logged
+                    Mọi lần truy cập đều được giám sát và ghi log
                 </div>
             </div>
         </div>
