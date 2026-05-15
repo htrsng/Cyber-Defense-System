@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
 import { simulateAPI } from '../services/api';
 
 function SimCard({ title, icon, description, color, children, onRun, running, label }) {
@@ -38,6 +39,8 @@ function Slider({ label, value, onChange, min, max, unit }) {
 }
 
 export default function SimulatePage({ logs }) {
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'admin';
     const [bfAttempts, setBfAttempts] = useState(15);
     const [bfDelay, setBfDelay] = useState(200);
     const [bfRunning, setBfRunning] = useState(false);
@@ -102,103 +105,117 @@ export default function SimulatePage({ logs }) {
         <div>
             <div className="section-title">⚡ ATTACK SIMULATION ENGINE</div>
 
-            <div style={{
-                padding: '10px 16px', marginBottom: 20,
-                background: 'var(--amber-dim)', border: '1px solid var(--amber)44',
-                borderRadius: 'var(--radius)', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--amber)',
-            }}>
-                ⚠ DEMO MODE — Simulations gọi trực tiếp các API endpoint thật và tạo log thật. Tất cả event đều được ghi nhận và chấm điểm.
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 24 }}>
-
-                {/* Brute Force */}
-                <SimCard
-                    title="Brute Force Attack"
-                    icon="⚡" color="var(--red)"
-                    description="Mô phỏng các lần login liên tiếp từ một IP để kích hoạt rate limiting và anomaly detection."
-                    onRun={runBruteForce} running={bfRunning} label="BRUTE FORCE"
-                >
-                    <Slider label="Attempts" value={bfAttempts} onChange={setBfAttempts} min={5} max={50} unit="" />
-                    <Slider label="Delay (ms)" value={bfDelay} onChange={setBfDelay} min={50} max={1000} unit="ms" />
-                    {bfResult && (
-                        <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--bg-base)', borderRadius: 4, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
-                            <div style={{ color: 'var(--text-muted)', marginBottom: 4 }}>KẾT QUẢ</div>
-                            <div style={{ color: 'var(--red)' }}>Attempts: {bfResult.attempts}</div>
-                            <div style={{ color: bfResult.blocked ? 'var(--red)' : 'var(--green)' }}>
-                                {bfResult.blocked ? '⛔ IP BLOCKED' : '✓ Chưa bị block'}
-                            </div>
-                            <div style={{ color: 'var(--amber)' }}>Risk Score: {bfResult.finalRiskScore}/100</div>
-                        </div>
-                    )}
-                </SimCard>
-
-                {/* SQLi */}
-                <SimCard
-                    title="SQL Injection Sim"
-                    icon="💉" color="var(--orange)"
-                    description="Gửi các SQL injection payload phổ biến đến login và search endpoints. Kiểm tra input sanitization và logging."
-                    onRun={runSQLi} running={sqliRunning} label="SQL INJECTION"
-                >
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', lineHeight: 2 }}>
-                        Payloads: <span style={{ color: 'var(--orange)' }}>{"' OR 1=1 --"}</span><br />
-                        {"' UNION SELECT * FROM users --"}<br />
-                        {"'; DROP TABLE logs; --"}
-                    </div>
-                    {sqliResult && (
-                        <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--bg-base)', borderRadius: 4, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
-                            <div style={{ color: 'var(--orange)' }}>Payloads tested: {sqliResult.payloadsTested}</div>
-                            <div style={{ color: 'var(--amber)' }}>Risk Score: {sqliResult.riskScore}/100</div>
-                        </div>
-                    )}
-                </SimCard>
-
-                {/* Honeypot */}
-                <SimCard
-                    title="Honeypot Trigger"
-                    icon="🍯" color="var(--amber)"
-                    description="Truy cập các honeypot endpoints ẩn (/.env, /wp-admin, /admin/secret) để minh họa khả năng phát hiện tức thì."
-                    onRun={runHoneypot} running={hpRunning} label="HONEYPOT"
-                >
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', lineHeight: 2 }}>
-                        Targets: <span style={{ color: 'var(--amber)' }}>/.env</span><br />
-                        <span style={{ color: 'var(--amber)' }}>/admin/secret</span><br />
-                        <span style={{ color: 'var(--amber)' }}>/wp-admin</span>
-                    </div>
-                    {hpResult && (
-                        <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--bg-base)', borderRadius: 4, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
-                            <div style={{ color: 'var(--red)' }}>Endpoints hit: {hpResult.endpointsHit}</div>
-                            <div style={{ color: 'var(--amber)' }}>Risk Score: {hpResult.riskScore}/100</div>
-                        </div>
-                    )}
-                </SimCard>
-            </div>
-
-            {/* Terminal log */}
-            <div className="card">
-                <div className="card-header">
-                    <span className="card-title">Simulation Terminal</span>
-                    <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => setSimLogs([])}>
-                        XÓA
-                    </button>
-                </div>
+            {!isAdmin && (
                 <div style={{
-                    background: 'var(--bg-base)', borderRadius: 4, padding: 14,
-                    fontFamily: 'var(--font-mono)', fontSize: 12,
-                    minHeight: 160, maxHeight: 280, overflowY: 'auto',
+                    padding: '12px 16px', marginBottom: 20,
+                    background: 'var(--text-dim)22', border: '1px solid var(--text-dim)44',
+                    borderRadius: 'var(--radius)', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)',
                 }}>
-                    {simLogs.length === 0 ? (
-                        <span style={{ color: 'var(--text-dim)' }}>// Chạy một simulation phía trên để xem output tại đây...</span>
-                    ) : (
-                        simLogs.map((l, i) => (
-                            <div key={i} style={{ display: 'flex', gap: 12, marginBottom: 4 }}>
-                                <span style={{ color: 'var(--text-dim)', flexShrink: 0 }}>{l.ts}</span>
-                                <span style={{ color: l.color }}>{l.msg}</span>
-                            </div>
-                        ))
-                    )}
+                    🔒 Simulation features are restricted to admin users only. Contact your administrator for access.
                 </div>
-            </div>
+            )}
+
+            {isAdmin && (
+                <>
+                    <div style={{
+                        padding: '10px 16px', marginBottom: 20,
+                        background: 'var(--amber-dim)', border: '1px solid var(--amber)44',
+                        borderRadius: 'var(--radius)', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--amber)',
+                    }}>
+                        ⚠ DEMO MODE — Simulations gọi trực tiếp các API endpoint thật và tạo log thật. Tất cả event đều được ghi nhận và chấm điểm.
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 24 }}>
+
+                        {/* Brute Force */}
+                        <SimCard
+                            title="Brute Force Attack"
+                            icon="⚡" color="var(--red)"
+                            description="Mô phỏng các lần login liên tiếp từ một IP để kích hoạt rate limiting và anomaly detection."
+                            onRun={runBruteForce} running={bfRunning} label="BRUTE FORCE"
+                        >
+                            <Slider label="Attempts" value={bfAttempts} onChange={setBfAttempts} min={5} max={50} unit="" />
+                            <Slider label="Delay (ms)" value={bfDelay} onChange={setBfDelay} min={50} max={1000} unit="ms" />
+                            {bfResult && (
+                                <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--bg-base)', borderRadius: 4, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                                    <div style={{ color: 'var(--text-muted)', marginBottom: 4 }}>KẾT QUẢ</div>
+                                    <div style={{ color: 'var(--red)' }}>Attempts: {bfResult.attempts}</div>
+                                    <div style={{ color: bfResult.blocked ? 'var(--red)' : 'var(--green)' }}>
+                                        {bfResult.blocked ? '⛔ IP BLOCKED' : '✓ Chưa bị block'}
+                                    </div>
+                                    <div style={{ color: 'var(--amber)' }}>Risk Score: {bfResult.finalRiskScore}/100</div>
+                                </div>
+                            )}
+                        </SimCard>
+
+                        {/* SQLi */}
+                        <SimCard
+                            title="SQL Injection Sim"
+                            icon="💉" color="var(--orange)"
+                            description="Gửi các SQL injection payload phổ biến đến login và search endpoints. Kiểm tra input sanitization và logging."
+                            onRun={runSQLi} running={sqliRunning} label="SQL INJECTION"
+                        >
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', lineHeight: 2 }}>
+                                Payloads: <span style={{ color: 'var(--orange)' }}>{"' OR 1=1 --"}</span><br />
+                                {"' UNION SELECT * FROM users --"}<br />
+                                {"'; DROP TABLE logs; --"}
+                            </div>
+                            {sqliResult && (
+                                <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--bg-base)', borderRadius: 4, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                                    <div style={{ color: 'var(--orange)' }}>Payloads tested: {sqliResult.payloadsTested}</div>
+                                    <div style={{ color: 'var(--amber)' }}>Risk Score: {sqliResult.riskScore}/100</div>
+                                </div>
+                            )}
+                        </SimCard>
+
+                        {/* Honeypot */}
+                        <SimCard
+                            title="Honeypot Trigger"
+                            icon="🍯" color="var(--amber)"
+                            description="Truy cập các honeypot endpoints ẩn (/.env, /wp-admin, /admin/secret) để minh họa khả năng phát hiện tức thì."
+                            onRun={runHoneypot} running={hpRunning} label="HONEYPOT"
+                        >
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', lineHeight: 2 }}>
+                                Targets: <span style={{ color: 'var(--amber)' }}>/.env</span><br />
+                                <span style={{ color: 'var(--amber)' }}>/admin/secret</span><br />
+                                <span style={{ color: 'var(--amber)' }}>/wp-admin</span>
+                            </div>
+                            {hpResult && (
+                                <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--bg-base)', borderRadius: 4, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                                    <div style={{ color: 'var(--red)' }}>Endpoints hit: {hpResult.endpointsHit}</div>
+                                    <div style={{ color: 'var(--amber)' }}>Risk Score: {hpResult.riskScore}/100</div>
+                                </div>
+                            )}
+                        </SimCard>
+                    </div>
+
+                    {/* Terminal log */}
+                    <div className="card">
+                        <div className="card-header">
+                            <span className="card-title">Simulation Terminal</span>
+                            <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => setSimLogs([])}>
+                                XÓA
+                            </button>
+                        </div>
+                        <div style={{
+                            background: 'var(--bg-base)', borderRadius: 4, padding: 14,
+                            fontFamily: 'var(--font-mono)', fontSize: 12,
+                            minHeight: 160, maxHeight: 280, overflowY: 'auto',
+                        }}>
+                            {simLogs.length === 0 ? (
+                                <span style={{ color: 'var(--text-dim)' }}>// Chạy một simulation phía trên để xem output tại đây...</span>
+                            ) : (
+                                simLogs.map((l, i) => (
+                                    <div key={i} style={{ display: 'flex', gap: 12, marginBottom: 4 }}>
+                                        <span style={{ color: 'var(--text-dim)', flexShrink: 0 }}>{l.ts}</span>
+                                        <span style={{ color: l.color }}>{l.msg}</span>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }

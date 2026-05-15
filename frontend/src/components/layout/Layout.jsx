@@ -7,6 +7,7 @@ const NAV = [
     { icon: '◎', label: 'Threats', path: 'threats' },
     { icon: '◇', label: 'Risk Score', path: 'risk' },
     { icon: '⚡', label: 'Simulate', path: 'simulate' },
+    { icon: '⚔', label: 'Visualizer', path: 'visualizer' },
 ];
 
 export default function Layout({ currentPage, onNavigate, children, liveAlerts = 0 }) {
@@ -40,9 +41,21 @@ export default function Layout({ currentPage, onNavigate, children, liveAlerts =
                         <div className={`dot ${socketOnline ? 'online' : 'offline'}`} />
                         <span>{socketOnline ? 'TRỰC TUYẾN' : 'NGOẠI TUYẾN'}</span>
                     </div>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)' }}>
-                        {user?.email || 'admin@cyberdef'}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)' }}>
+                            {user?.email || 'admin@cyberdef'}
+                        </span>
+                        {user?.role === 'admin' && (
+                            <span className="badge" style={{ background: 'var(--red)22', color: 'var(--red)', borderColor: 'var(--red)44' }}>
+                                👑 ADMIN
+                            </span>
+                        )}
+                        {user?.role === 'viewer' && (
+                            <span className="badge" style={{ background: 'var(--text-dim)22', color: 'var(--text-dim)', borderColor: 'var(--text-dim)44' }}>
+                                👁 VIEWER
+                            </span>
+                        )}
+                    </div>
                     <button className="btn btn-ghost" onClick={logout} style={{ padding: '5px 12px' }}>
                         ĐĂNG XUẤT
                     </button>

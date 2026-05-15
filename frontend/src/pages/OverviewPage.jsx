@@ -51,6 +51,32 @@ export default function OverviewPage({ liveAlerts, recentLogs }) {
         riskAPI.getStats().then(r => setStats(r.data)).catch(() => { });
     }, []);
 
+    useEffect(() => {
+        if (liveAlerts.length > 0) {
+            // Re-fetch top IPs whenever a new alert comes in
+            riskAPI.getTopIPs()
+                .then(r => setTopIPs(r.data.top || []))
+                .catch(() => { });
+            // Re-fetch stats
+            riskAPI.getStats()
+                .then(r => setStats(r.data))
+                .catch(() => { });
+        }
+    }, [liveAlerts.length]);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            riskAPI.getStats()
+                .then(r => setStats(r.data))
+                .catch(() => { });
+            riskAPI.getTopIPs()
+                .then(r => setTopIPs(r.data.top || []))
+                .catch(() => { });
+        }, 15000);
+
+        return () => clearInterval(interval);
+    }, []);
+
     const sevDist = [
         { name: 'Critical', value: 4, color: SEVERITY_COLORS.critical },
         { name: 'High', value: 12, color: SEVERITY_COLORS.high },
@@ -67,16 +93,37 @@ export default function OverviewPage({ liveAlerts, recentLogs }) {
         return 'var(--green)';
     }
 
+    const ALERT_LABELS = {
+        BRUTE_FORCE_DETECTED: '⚡ BRUTE FORCE DETECTED',
+        SQLI_DETECTED: '💉 SQL INJECTION DETECTED',
+        HONEYPOT_TRIGGERED: '🍯 HONEYPOT TRIGGERED',
+        SCANNING_DETECTED: '🔍 SCANNING DETECTED',
+    };
+
+    const ALERT_SEVERITY = {
+        BRUTE_FORCE_DETECTED: 'high',
+        SQLI_DETECTED: 'high',
+        HONEYPOT_TRIGGERED: 'critical',
+        SCANNING_DETECTED: 'medium',
+    };
+
+    // Deduplicate: keep only the latest alert per type
+    const uniqueAlerts = liveAlerts.reduce((acc, alert) => {
+        const key = alert.type;
+        if (!acc.find(a => a.type === key)) acc.push(alert);
+        return acc;
+    }, []).slice(0, 4);
+
     return (
         <div>
             <div className="section-title">◈ THREAT OVERVIEW</div>
 
             {/* ── Live alerts ── */}
-            {liveAlerts.slice(0, 3).map((alert, i) => (
-                <div key={i} className={`alert-banner ${alert.severity}`}>
+            {uniqueAlerts.map((alert, i) => (
+                <div key={i} className={`alert-banner ${ALERT_SEVERITY[alert.type] || alert.severity}`}>
                     <span style={{ flexShrink: 0 }}>⚠</span>
                     <div>
-                        <strong>{alert.type?.replace(/_/g, ' ')}</strong>
+                        <strong>{ALERT_LABELS[alert.type] || alert.type?.replace(/_/g, ' ')}</strong>
                         {' — '}
                         <span className="ip-tag">{alert.ipAddress}</span>
                         {' '}
@@ -148,14 +195,14 @@ export default function OverviewPage({ liveAlerts, recentLogs }) {
                         <span className="card-title">Severity Distribution</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-                        <ResponsiveContainer width={130} height={130}>
-                            <PieChart>
+                        <div style={{ width: 130, height: 130 }}>
+                            <PieChart width={130} height={130}>
                                 <Pie data={sevDist} cx="50%" cy="50%" innerRadius={40} outerRadius={60}
                                     dataKey="value" strokeWidth={0} paddingAngle={2}>
                                     {sevDist.map((e, i) => <Cell key={i} fill={e.color} />)}
                                 </Pie>
                             </PieChart>
-                        </ResponsiveContainer>
+                        </div>
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
                             {sevDist.map(s => (
                                 <div key={s.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -177,7 +224,7 @@ export default function OverviewPage({ liveAlerts, recentLogs }) {
                         <div className="empty-state">Chưa phát hiện IP có risk cao</div>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {topIPs.slice(0, 5).map((item, i) => (
+                            {topIPs.slice(0, 8).map((item, i) => (
                                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                     <div className="risk-circle" style={{ color: riskColor(item.score), width: 44, height: 44, fontSize: 13 }}>
                                         {item.score}

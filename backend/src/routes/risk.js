@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 const ActivityLog = require('../models/ActivityLog');
 const SecurityEvent = require('../models/SecurityEvent');
+const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { calculateRiskScore, batchCalculateRiskScore } = require('../services/riskScorer');
 const { runAnomalyDetection } = require('../services/anomalyDetector');
 
@@ -61,8 +62,8 @@ router.get('/top/ips', async (req, res) => {
     }
 });
 
-// POST /api/risk/analyze — trigger manual anomaly scan
-router.post('/analyze', async (req, res) => {
+// POST /api/risk/analyze — trigger manual anomaly scan (admin only)
+router.post('/analyze', authMiddleware, adminMiddleware, async (req, res) => {
     try {
         const io = req.app.get('io');
         await runAnomalyDetection(io);

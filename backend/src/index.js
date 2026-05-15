@@ -12,15 +12,19 @@ const redis = require('./config/redis');
 const app = express();
 const server = http.createServer(app);
 
+const allowedOrigins = ['http://localhost:3000', 'http://localhost:3001'];
+
+app.set('trust proxy', true);
+
 // Socket.io — real-time push tới dashboard
 const io = new Server(server, {
-  cors: { origin: 'http://localhost:3000', methods: ['GET', 'POST'] }
+  cors: { origin: allowedOrigins, methods: ['GET', 'POST'] }
 });
 app.set('io', io); // chia sẻ io instance cho toàn bộ service
 
 // Middleware
 app.use(helmet());
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 app.use(morgan('combined'));
 

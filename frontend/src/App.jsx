@@ -7,6 +7,8 @@ import OverviewPage from './pages/OverviewPage';
 import LiveLogsPage from './pages/LiveLogsPage';
 import RiskPage from './pages/RiskPage';
 import SimulatePage from './pages/SimulatePage';
+import { ThreatsPage } from './pages/ThreatsPage';
+import AttackVisualizerPage from './pages/AttackVisualizerPage';
 import './index.css';
 
 const MAX_LOGS = 200;
@@ -61,12 +63,8 @@ function AppInner() {
             case 'logs': return <LiveLogsPage logs={logs} />;
             case 'risk': return <RiskPage topIPs={topIPs} />;
             case 'simulate': return <SimulatePage logs={logs} />;
-            case 'threats': return (
-                <div>
-                    <div className="section-title">◎ ACTIVE THREATS</div>
-                    <div className="empty-state">Giao diện quản lý Threats — kết nối backend để xem Security Events</div>
-                </div>
-            );
+            case 'threats': return <ThreatsPage liveAlerts={liveAlerts} />;
+            case 'visualizer': return <AttackVisualizerPage />;
             default: return null;
         }
     };
