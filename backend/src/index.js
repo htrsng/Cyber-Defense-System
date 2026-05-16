@@ -16,6 +16,17 @@ const allowedOrigins = ['http://localhost:3000', 'http://localhost:3001'];
 
 app.set('trust proxy', true);
 
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src fonts.gstatic.com; object-src 'none'; base-uri 'self'"
+  );
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  next();
+});
+
 // Socket.io — real-time push tới dashboard
 const io = new Server(server, {
   cors: { origin: allowedOrigins, methods: ['GET', 'POST'] }
@@ -34,6 +45,7 @@ app.use('/api/logs', require('./routes/logs'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/simulate', require('./routes/simulate'));
 app.use('/api/risk', require('./routes/risk'));
+app.use('/api/xss', require('./routes/xss'));
 
 // Honeypot endpoints — bẫy reconnaissance
 app.all('/admin/secret', require('./middleware/honeypot'));

@@ -51,12 +51,20 @@ const RULES = [
         },
     },
     {
+        id: 'XSS_ATTEMPT',
+        label: 'XSS payload detected in requests',
+        weight: 45,
+        async evaluate({ recentLogs }) {
+            return recentLogs.some(l => l.eventType === 'ATTACK_SIM_XSS');
+        },
+    },
+    {
         id: 'MULTIPLE_ATTACK_TYPES',
         label: 'Multiple attack types detected from same IP (coordinated attack)',
         weight: 20,
         async evaluate({ recentLogs }) {
             const types = new Set(recentLogs.map(l => l.eventType));
-            const attackTypes = ['ATTACK_SIM_SQLI', 'ATTACK_SIM_BRUTE_FORCE', 'HONEYPOT_TRIGGERED'];
+            const attackTypes = ['ATTACK_SIM_SQLI', 'ATTACK_SIM_XSS', 'ATTACK_SIM_BRUTE_FORCE', 'HONEYPOT_TRIGGERED'];
             return attackTypes.filter(t => types.has(t)).length >= 2;
         },
     },

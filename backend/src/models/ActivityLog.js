@@ -8,22 +8,22 @@ const activityLogSchema = new mongoose.Schema({
       'REGISTER', 'PASSWORD_CHANGE',
       'RATE_LIMIT_HIT', 'IP_BLOCKED', 'IP_UNBLOCKED',
       'HONEYPOT_TRIGGERED',
-      'ATTACK_SIM_BRUTE_FORCE', 'ATTACK_SIM_SQLI', 'ATTACK_SIM_HONEYPOT',
+      'ATTACK_SIM_BRUTE_FORCE', 'ATTACK_SIM_SQLI', 'ATTACK_SIM_XSS', 'ATTACK_SIM_HONEYPOT',
       'SUSPICIOUS_ACTIVITY', 'ANOMALY_DETECTED',
     ],
     required: true,
   },
-  userId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   ipAddress: { type: String, required: true },
   userAgent: { type: String, default: '' },
-  endpoint:  { type: String, default: '' },
-  method:    { type: String, default: '' },
+  endpoint: { type: String, default: '' },
+  method: { type: String, default: '' },
 
   // Payload linh hoạt theo từng loại event — lợi thế của MongoDB
   metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
 
   // AI risk score tại thời điểm event xảy ra
-  riskScore:   { type: Number, min: 0, max: 100, default: 0 },
+  riskScore: { type: Number, min: 0, max: 100, default: 0 },
   riskReasons: [{ type: String }],
 
   severity: {

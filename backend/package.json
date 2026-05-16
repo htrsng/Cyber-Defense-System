@@ -7,6 +7,7 @@
     "seed": "node src/scripts/seed.js",
     "attack:brute": "node src/scripts/attacker/brute-force-attacker.js",
     "attack:sqli": "node src/scripts/attacker/sqli-attacker.js",
+    "attack:xss": "node src/scripts/attacker/xss-attacker.js",
     "attack:recon": "node src/scripts/attacker/recon-attacker.js"
   },
   "dependencies": {
