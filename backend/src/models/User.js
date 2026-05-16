@@ -1,13 +1,15 @@
 const mongoose = require('mongoose');
-const bcrypt   = require('bcryptjs');
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  email:      { type: String, required: true, unique: true, lowercase: true, trim: true },
-  password:   { type: String, required: true, minlength: 8 },
-  role:       { type: String, enum: ['admin', 'viewer'], default: 'viewer' },
-  lastLogin:  { type: Date },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  password: { type: String, required: true, minlength: 8 },
+  role: { type: String, enum: ['admin', 'viewer'], default: 'viewer' },
+  lastLogin: { type: Date },
   loginCount: { type: Number, default: 0 },
-  isBlocked:  { type: Boolean, default: false },
+  isBlocked: { type: Boolean, default: false },
+  twoFactorEnabled: { type: Boolean, default: false },
+  twoFactorSecret: { type: String, default: null },
 }, { timestamps: true });
 
 // Hash password trước khi lưu

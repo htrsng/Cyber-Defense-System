@@ -97,6 +97,14 @@ async function login(req, res) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
+        if (user.twoFactorEnabled) {
+            return res.status(200).json({
+                requiresTwoFactor: true,
+                userId: user._id,
+                message: 'OTP required',
+            });
+        }
+
         user.lastLogin = new Date();
         user.loginCount += 1;
         await user.save();

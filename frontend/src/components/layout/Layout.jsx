@@ -8,6 +8,7 @@ const NAV = [
     { icon: '◇', label: 'Risk Score', path: 'risk' },
     { icon: '⚡', label: 'Simulate', path: 'simulate' },
     { icon: '⚡', label: 'XSS Demo', path: 'xss' },
+    { icon: '🔐', label: '2FA', path: 'twofactor' },
     { icon: '⚔', label: 'Visualizer', path: 'visualizer' },
 ];
 

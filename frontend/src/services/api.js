@@ -30,6 +30,14 @@ export const authAPI = {
     me: () => api.get('/api/auth/me'),
 };
 
+export const twoFactorAPI = {
+    setup: () => api.post('/api/auth/2fa/setup'),
+    verify: (data) => api.post('/api/auth/2fa/verify', data),
+    validate: (data) => api.post('/api/auth/2fa/validate', data),
+    disable: (data) => api.post('/api/auth/2fa/disable', data),
+    status: () => api.get('/api/auth/2fa/status'),
+};
+
 export const logsAPI = {
     getAll: (params) => api.get('/api/logs', { params }),
     getStats: () => api.get('/api/logs/stats'),

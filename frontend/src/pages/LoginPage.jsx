@@ -2,19 +2,48 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
 export default function LoginPage() {
-    const { login } = useAuth();
+    const { login, verifyTwoFactor } = useAuth();
+    const [step, setStep] = useState('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [otp, setOtp] = useState('');
+    const [pendingUserId, setPendingUserId] = useState(null);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = async (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
         setError(''); setLoading(true);
         try {
-            await login(email, password);
+            const data = await login(email, password);
+
+            if (data.requiresTwoFactor) {
+                setStep('otp');
+                setPendingUserId(data.userId);
+                setOtp('');
+                return;
+            }
+
+            setStep('login');
+            setPendingUserId(null);
+            setOtp('');
         } catch (err) {
-            setError(err.response?.data?.message || 'Login failed');
+            setError(err.response?.data?.error || err.response?.data?.message || 'Login failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleTwoFactorSubmit = async (e) => {
+        e.preventDefault();
+        if (!pendingUserId) return;
+
+        setError('');
+        setLoading(true);
+        try {
+            await verifyTwoFactor(pendingUserId, otp);
+        } catch (err) {
+            setError(err.response?.data?.error || err.response?.data?.message || 'Invalid OTP');
         } finally {
             setLoading(false);
         }
@@ -63,21 +92,49 @@ export default function LoginPage() {
                         Xác thực
                     </div>
 
-                    <form onSubmit={handleSubmit}>
+                    <form onSubmit={step === 'otp' ? handleTwoFactorSubmit : handleLogin}>
+                        {step === 'otp' && (
+                            <div style={{
+                                marginBottom: 16,
+                                padding: '10px 12px',
+                                borderRadius: 4,
+                                border: '1px solid var(--cyan)44',
+                                background: 'var(--cyan-dim)',
+                                color: 'var(--cyan)',
+                                fontFamily: 'var(--font-mono)',
+                                fontSize: 12,
+                            }}>
+                                🔐 Nhập mã xác thực từ Google Authenticator
+                            </div>
+                        )}
+
                         <div style={{ marginBottom: 16 }}>
                             <label style={{ display: 'block', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.08em', marginBottom: 6 }}>
                                 EMAIL
                             </label>
-                            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                            <input type="email" value={email} onChange={e => setEmail(e.target.value)} disabled={step === 'otp'}
                                 placeholder="admin@cyberdef.io" style={inputStyle} required />
                         </div>
 
                         <div style={{ marginBottom: 24 }}>
                             <label style={{ display: 'block', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.08em', marginBottom: 6 }}>
-                                PASSWORD
+                                {step === 'otp' ? 'OTP CODE' : 'PASSWORD'}
                             </label>
-                            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                                placeholder="••••••••" style={inputStyle} required />
+                            {step === 'otp' ? (
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    autoComplete="one-time-code"
+                                    value={otp}
+                                    onChange={e => setOtp(e.target.value)}
+                                    placeholder="123456"
+                                    style={inputStyle}
+                                    required
+                                />
+                            ) : (
+                                <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                                    placeholder="••••••••" style={inputStyle} required />
+                            )}
                         </div>
 
                         {error && (
@@ -89,7 +146,7 @@ export default function LoginPage() {
                         <button type="submit" className="btn btn-primary"
                             style={{ width: '100%', justifyContent: 'center', padding: '10px', fontSize: 14 }}
                             disabled={loading}>
-                            {loading ? '⟳ ĐANG XÁC THỰC...' : '▶ TRUY CẬP HỆ THỐNG'}
+                            {loading ? '⟳ ĐANG XÁC THỰC...' : step === 'otp' ? '▶ XÁC MINH OTP' : '▶ TRUY CẬP HỆ THỐNG'}
                         </button>
                     </form>
                 </div>

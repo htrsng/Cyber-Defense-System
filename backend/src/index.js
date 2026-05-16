@@ -41,6 +41,7 @@ app.use(morgan('combined'));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/auth/2fa', require('./routes/twoFactor'));
 app.use('/api/logs', require('./routes/logs'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/simulate', require('./routes/simulate'));

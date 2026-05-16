@@ -3,7 +3,8 @@ import {
     AreaChart, Area, BarChart, Bar, XAxis, YAxis,
     Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts';
-import { riskAPI, logsAPI } from '../services/api';
+import { riskAPI, twoFactorAPI } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 
 // ─── Mock data generators (replaced by real API in prod) ─────────────────────
 function genTimeSeriesData() {
@@ -42,13 +43,29 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function OverviewPage({ liveAlerts, recentLogs }) {
+    const { user } = useAuth();
     const [timeData] = useState(genTimeSeriesData);
     const [topIPs, setTopIPs] = useState([]);
     const [stats, setStats] = useState(null);
+    const [twoFactorStatus, setTwoFactorStatus] = useState(null);
+    const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+    const [twoFactorMessage, setTwoFactorMessage] = useState('');
+    const [twoFactorError, setTwoFactorError] = useState('');
+    const [twoFactorOtp, setTwoFactorOtp] = useState('');
+    const [setupData, setSetupData] = useState(null);
+
+    const refreshTwoFactorStatus = () => {
+        twoFactorAPI.status()
+            .then(r => setTwoFactorStatus(r.data))
+            .catch(() => { });
+    };
 
     useEffect(() => {
         riskAPI.getTopIPs().then(r => setTopIPs(r.data.top || [])).catch(() => { });
         riskAPI.getStats().then(r => setStats(r.data)).catch(() => { });
+        if (user) {
+            refreshTwoFactorStatus();
+        }
     }, []);
 
     useEffect(() => {
@@ -76,6 +93,60 @@ export default function OverviewPage({ liveAlerts, recentLogs }) {
 
         return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        if (user) {
+            refreshTwoFactorStatus();
+        }
+    }, [user]);
+
+    const startTwoFactorSetup = async () => {
+        setTwoFactorLoading(true);
+        setTwoFactorError('');
+        setTwoFactorMessage('');
+        try {
+            const { data } = await twoFactorAPI.setup();
+            setSetupData(data);
+            setTwoFactorMessage(data.message || 'Scan QR code to continue');
+            refreshTwoFactorStatus();
+        } catch (error) {
+            setTwoFactorError(error.response?.data?.error || 'Failed to start 2FA setup');
+        } finally {
+            setTwoFactorLoading(false);
+        }
+    };
+
+    const confirmTwoFactorSetup = async () => {
+        setTwoFactorLoading(true);
+        setTwoFactorError('');
+        try {
+            await twoFactorAPI.verify({ token: twoFactorOtp });
+            setTwoFactorMessage('2FA enabled successfully');
+            setSetupData(null);
+            setTwoFactorOtp('');
+            refreshTwoFactorStatus();
+        } catch (error) {
+            setTwoFactorError(error.response?.data?.error || 'Invalid OTP');
+        } finally {
+            setTwoFactorLoading(false);
+        }
+    };
+
+    const disableTwoFactor = async () => {
+        setTwoFactorLoading(true);
+        setTwoFactorError('');
+        try {
+            await twoFactorAPI.disable({ token: twoFactorOtp });
+            setTwoFactorMessage('2FA disabled');
+            setSetupData(null);
+            setTwoFactorOtp('');
+            refreshTwoFactorStatus();
+        } catch (error) {
+            setTwoFactorError(error.response?.data?.error || 'Invalid OTP');
+        } finally {
+            setTwoFactorLoading(false);
+        }
+    };
 
     const sevDist = [
         { name: 'Critical', value: 4, color: SEVERITY_COLORS.critical },
@@ -117,6 +188,84 @@ export default function OverviewPage({ liveAlerts, recentLogs }) {
     return (
         <div>
             <div className="section-title">◈ THREAT OVERVIEW</div>
+
+            <div className="card" style={{ marginBottom: 20 }}>
+                <div className="card-header">
+                    <span className="card-title">Account Security / 2FA</span>
+                    <span className={`badge ${twoFactorStatus?.enabled ? 'safe' : 'low'}`}>
+                        {twoFactorStatus?.enabled ? 'ENABLED' : 'DISABLED'}
+                    </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'start' }}>
+                    <div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
+                            {user?.email || '—'}
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-primary)', marginBottom: 10 }}>
+                            {twoFactorStatus?.enabled
+                                ? 'Two-Factor Authentication is active for this account.'
+                                : 'Enable TOTP 2FA to require one-time codes during login.'}
+                        </div>
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+                            <button className="btn btn-primary" onClick={startTwoFactorSetup} disabled={twoFactorLoading}>
+                                {twoFactorLoading ? '⟳ ĐANG XỬ LÝ...' : '▶ THIẾT LẬP 2FA'}
+                            </button>
+                            <button className="btn btn-ghost" onClick={disableTwoFactor} disabled={twoFactorLoading || !twoFactorStatus?.enabled}>
+                                TẮT 2FA
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+                            <input
+                                type="text"
+                                value={twoFactorOtp}
+                                onChange={e => setTwoFactorOtp(e.target.value)}
+                                placeholder="Enter OTP for verify/disable"
+                                style={{
+                                    minWidth: 260,
+                                    background: 'var(--bg-base)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: 'var(--radius)',
+                                    padding: '8px 14px',
+                                    color: 'var(--text-primary)',
+                                    fontFamily: 'var(--font-mono)',
+                                    fontSize: 13,
+                                    outline: 'none',
+                                }}
+                            />
+                            <button className="btn btn-ghost" onClick={confirmTwoFactorSetup} disabled={twoFactorLoading || !setupData}>
+                                XÁC MINH & BẬT
+                            </button>
+                        </div>
+
+                        {twoFactorMessage && (
+                            <div style={{ color: 'var(--green)', fontFamily: 'var(--font-mono)', fontSize: 12, marginBottom: 8 }}>
+                                {twoFactorMessage}
+                            </div>
+                        )}
+                        {twoFactorError && (
+                            <div style={{ color: 'var(--red)', fontFamily: 'var(--font-mono)', fontSize: 12, marginBottom: 8 }}>
+                                {twoFactorError}
+                            </div>
+                        )}
+                    </div>
+
+                    {setupData?.qrCodeUrl && (
+                        <div style={{ textAlign: 'center' }}>
+                            <img
+                                src={setupData.qrCodeUrl}
+                                alt="2FA QR Code"
+                                style={{ width: 160, height: 160, borderRadius: 8, border: '1px solid var(--border)', background: '#fff' }}
+                            />
+                            <div style={{ marginTop: 8, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', wordBreak: 'break-word', maxWidth: 180 }}>
+                                {setupData.secret}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
 
             {/* ── Live alerts ── */}
             {uniqueAlerts.map((alert, i) => (
