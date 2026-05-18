@@ -1,19 +1,19 @@
-const ActivityLog   = require('../models/ActivityLog');
+const ActivityLog = require('../models/ActivityLog');
 const SecurityEvent = require('../models/SecurityEvent');
 
 module.exports = async (req, res) => {
   const ipAddress = req.ip || req.connection.remoteAddress;
-  const io        = req.app.get('io');
+  const io = req.app.get('io');
 
   try {
     // Ghi log honeypot
     await ActivityLog.create({
-      eventType:   'HONEYPOT_TRIGGERED',
+      eventType: 'HONEYPOT_TRIGGERED',
       ipAddress,
-      userAgent:   req.headers['user-agent'] || '',
-      endpoint:    req.path,
-      method:      req.method,
-      riskScore:   95,
+      userAgent: req.headers['user-agent'] || '',
+      endpoint: req.path,
+      method: req.method,
+      riskScore: 95,
       riskReasons: [
         'Accessed known honeypot endpoint',
         'Possible attacker reconnaissance',
@@ -22,31 +22,35 @@ module.exports = async (req, res) => {
       severity: 'critical',
       metadata: {
         headers: req.headers,
-        query:   req.query,
-        body:    req.body,
+        query: req.query,
+        body: req.body,
+        country: req.geoInfo?.country,
+        city: req.geoInfo?.city,
+        region: req.geoInfo?.region,
+        ll: req.geoInfo?.ll,
       },
     });
 
     // Tạo security event
     await SecurityEvent.create({
-      type:        'HONEYPOT_ACCESS',
+      type: 'HONEYPOT_ACCESS',
       ipAddress,
       description: `Honeypot triggered: ${req.method} ${req.path}`,
-      severity:    'critical',
-      riskScore:   95,
-      evidence:    {
-        endpoint:  req.path,
+      severity: 'critical',
+      riskScore: 95,
+      evidence: {
+        endpoint: req.path,
         userAgent: req.headers['user-agent'],
-        method:    req.method,
+        method: req.method,
       },
     });
 
     // Push real-time tới dashboard
     io?.emit('security_alert', {
-      type:      'HONEYPOT_TRIGGERED',
+      type: 'HONEYPOT_TRIGGERED',
       ipAddress,
-      endpoint:  req.path,
-      severity:  'critical',
+      endpoint: req.path,
+      severity: 'critical',
       riskScore: 95,
       timestamp: new Date(),
     });

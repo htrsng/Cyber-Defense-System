@@ -112,6 +112,9 @@ async function sqli(req, res, io) {
                         statusCode: response.status,
                         blocked: isBlocked,
                         successfulBypass: !isBlocked,
+                        country: req.geoInfo?.country,
+                        city: req.geoInfo?.city,
+                        region: req.geoInfo?.region,
                     },
                 });
 
@@ -136,6 +139,9 @@ async function sqli(req, res, io) {
                         endpoint: '/api/auth/login',
                         blocked: true,
                         error: error.message,
+                        country: req.geoInfo?.country,
+                        city: req.geoInfo?.city,
+                        region: req.geoInfo?.region,
                     },
                 });
                 testResults.push({
@@ -224,6 +230,9 @@ async function honeypot(req, res, io) {
                 metadata: {
                     endpoint,
                     method: 'GET',
+                    country: req.geoInfo?.country,
+                    city: req.geoInfo?.city,
+                    region: req.geoInfo?.region,
                 },
             });
 

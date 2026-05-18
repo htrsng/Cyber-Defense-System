@@ -8,6 +8,7 @@ const { Server } = require('socket.io');
 
 const connectDB = require('./config/database');
 const redis = require('./config/redis');
+const { authMiddleware, adminMiddleware } = require('./middleware/auth');
 
 const app = express();
 const server = http.createServer(app);
@@ -35,6 +36,7 @@ app.set('io', io); // chia sẻ io instance cho toàn bộ service
 
 // Middleware
 app.use(helmet());
+app.use(require('./middleware/geoip'));
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 app.use(morgan('combined'));
@@ -42,6 +44,7 @@ app.use(morgan('combined'));
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/auth/2fa', require('./routes/twoFactor'));
+app.use('/api/geoip', authMiddleware, adminMiddleware, require('./routes/geoip'));
 app.use('/api/logs', require('./routes/logs'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/simulate', require('./routes/simulate'));

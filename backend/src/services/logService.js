@@ -5,6 +5,7 @@
  */
 
 const ActivityLog = require('../models/ActivityLog');
+const geoip = require('geoip-lite');
 const redis = require('../config/redis');
 const { calculateRiskScore } = require('./riskScorer');
 const { runAnomalyDetection } = require('./anomalyDetector');
@@ -32,13 +33,27 @@ async function createLog({
     endpoint = '',
     method = '',
     metadata = {},
+    geoInfo = null,
     severity = 'info',
 }, io) {
+    const normalizedIp = String(ipAddress || '').replace('::ffff:', '');
+    const geoLookup = geoInfo || geoip.lookup(normalizedIp) || null;
+    const enrichedMetadata = {
+        ...metadata,
+    };
+
+    if (geoLookup) {
+        if (!enrichedMetadata.country && geoLookup.country) enrichedMetadata.country = geoLookup.country;
+        if (!enrichedMetadata.city && geoLookup.city) enrichedMetadata.city = geoLookup.city;
+        if (!enrichedMetadata.region && geoLookup.region) enrichedMetadata.region = geoLookup.region;
+        if (!enrichedMetadata.ll && geoLookup.ll) enrichedMetadata.ll = geoLookup.ll;
+    }
+
     // 1. Cập nhật Redis counters
-    await updateRedisCounters(eventType, ipAddress);
+    await updateRedisCounters(eventType, normalizedIp);
 
     // 2. Tính risk score real-time
-    const { score, reasons, level } = await calculateRiskScore(ipAddress);
+    const { score, reasons, level } = await calculateRiskScore(normalizedIp);
 
     // 3. Tự động nâng severity nếu risk score cao
     const finalSeverity = autoSeverity(severity, score);
@@ -46,12 +61,12 @@ async function createLog({
     // 4. Ghi vào MongoDB
     const log = await ActivityLog.create({
         eventType,
-        ipAddress,
+        ipAddress: normalizedIp,
         userId,
         userAgent,
         endpoint,
         method,
-        metadata,
+        metadata: enrichedMetadata,
         riskScore: score,
         riskReasons: reasons,
         severity: finalSeverity,
@@ -61,12 +76,13 @@ async function createLog({
     io?.emit('activity_log', {
         _id: log._id,
         eventType,
-        ipAddress,
+        ipAddress: normalizedIp,
         severity: finalSeverity,
         riskScore: score,
         riskLevel: level,
         reasons,
         endpoint,
+        metadata: enrichedMetadata,
         timestamp: log.createdAt,
     });
 

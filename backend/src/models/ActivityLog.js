@@ -20,7 +20,7 @@ const activityLogSchema = new mongoose.Schema({
   endpoint: { type: String, default: '' },
   method: { type: String, default: '' },
 
-  // Payload linh hoạt theo từng loại event — lợi thế của MongoDB
+  // Payload linh hoạt theo từng loại event — lợi thế của MongoDB (có thể chứa country/city/region/ll cho GeoIP)
   metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
 
   // AI risk score tại thời điểm event xảy ra

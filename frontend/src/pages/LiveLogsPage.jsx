@@ -15,6 +15,12 @@ const EVENT_ICONS = {
     DEFAULT: '·',
 };
 
+const COUNTRY_FLAGS = {
+    US: '🇺🇸', VN: '🇻🇳', CN: '🇨🇳', RU: '🇷🇺', KP: '🇰🇵',
+    DE: '🇩🇪', GB: '🇬🇧', FR: '🇫🇷', JP: '🇯🇵', KR: '🇰🇷',
+    IR: '🇮🇷', SY: '🇸🇾', CU: '🇨🇺', IN: '🇮🇳', BR: '🇧🇷',
+};
+
 function severityOf(entry) {
     return entry.severity || 'info';
 }
@@ -117,7 +123,17 @@ export default function LiveLogsPage({ logs }) {
                                     </span>
                                 )}
                             </span>
-                            <span className="log-ip">{entry.ipAddress || '—'}</span>
+                            <span className="log-ip">
+                                {entry.ipAddress || '—'}
+                                {entry.metadata?.country && (
+                                    <span style={{ marginLeft: 4, fontSize: 14 }}>
+                                        {COUNTRY_FLAGS[entry.metadata.country] || '🌐'}
+                                        <span style={{ fontSize: 10, color: 'var(--text-dim)', marginLeft: 2 }}>
+                                            {entry.metadata.country}
+                                        </span>
+                                    </span>
+                                )}
+                            </span>
                             <span className="log-score" style={{ color: riskColor(entry.riskScore), fontFamily: 'var(--font-mono)' }}>
                                 {entry.riskScore > 0 ? entry.riskScore : '—'}
                             </span>
