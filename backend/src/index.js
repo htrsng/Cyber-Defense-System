@@ -4,6 +4,7 @@ const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 const { Server } = require('socket.io');
 
 const connectDB = require('./config/database');
@@ -40,10 +41,18 @@ app.use(require('./middleware/geoip'));
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 app.use(morgan('combined'));
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.GLOBAL_RATE_LIMIT_MAX || 1000),
+  standardHeaders: true,
+  legacyHeaders: false,
+}));
+app.use(require('./middleware/tarpit'));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/auth/2fa', require('./routes/twoFactor'));
+app.use('/api/tarpit', authMiddleware, adminMiddleware, require('./routes/tarpit'));
 app.use('/api/geoip', authMiddleware, adminMiddleware, require('./routes/geoip'));
 app.use('/api/logs', require('./routes/logs'));
 app.use('/api/events', require('./routes/events'));

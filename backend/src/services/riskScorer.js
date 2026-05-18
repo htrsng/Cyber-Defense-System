@@ -27,6 +27,14 @@ const RULES = [
         },
     },
     {
+        id: 'BRUTE_FORCE_LOCKDOWN',
+        label: 'Sustained brute force (≥7 failed logins)',
+        weight: 40,
+        async evaluate({ windowCounts }) {
+            return windowCounts.failedLogins10m >= 7;
+        },
+    },
+    {
         id: 'HONEYPOT_ACCESS',
         label: 'Accessed honeypot endpoint (attacker reconnaissance)',
         weight: 35,

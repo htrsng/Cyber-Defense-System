@@ -3,7 +3,7 @@ import {
     AreaChart, Area, BarChart, Bar, XAxis, YAxis,
     Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts';
-import { riskAPI, twoFactorAPI } from '../services/api';
+import { riskAPI, tarpitAPI, twoFactorAPI } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
 // ─── Mock data generators (replaced by real API in prod) ─────────────────────
@@ -42,11 +42,37 @@ const CustomTooltip = ({ active, payload, label }) => {
     );
 };
 
-export default function OverviewPage({ liveAlerts, recentLogs }) {
+function calculateTarpitDelay(riskScore) {
+    const tarpitThreshold = 40;
+    const blockThreshold = 80;
+    const minDelay = 3000;
+    const maxDelay = 30000;
+
+    if (riskScore >= blockThreshold) return maxDelay;
+
+    const ratio = (riskScore - tarpitThreshold) / (blockThreshold - tarpitThreshold);
+    return Math.floor(minDelay + ratio * (maxDelay - minDelay));
+}
+
+function tarpitColor(score) {
+    if (score >= 80) return 'var(--red)';
+    if (score >= 60) return 'var(--orange)';
+    return 'var(--amber)';
+}
+
+function formatDelay(ms) {
+    if (!Number.isFinite(ms)) return '—';
+    if (ms >= 1000) return `${Math.round(ms / 1000)}s`;
+    return `${ms}ms`;
+}
+
+export default function OverviewPage({ liveAlerts, recentLogs, tarpitEvents = [] }) {
     const { user } = useAuth();
     const [timeData] = useState(genTimeSeriesData);
     const [topIPs, setTopIPs] = useState([]);
     const [stats, setStats] = useState(null);
+    const [tarpitStatus, setTarpitStatus] = useState([]);
+    const [now, setNow] = useState(Date.now());
     const [twoFactorStatus, setTwoFactorStatus] = useState(null);
     const [twoFactorLoading, setTwoFactorLoading] = useState(false);
     const [twoFactorMessage, setTwoFactorMessage] = useState('');
@@ -60,11 +86,18 @@ export default function OverviewPage({ liveAlerts, recentLogs }) {
             .catch(() => { });
     };
 
+    const refreshTarpitStatus = () => {
+        tarpitAPI.status()
+            .then(r => setTarpitStatus(r.data.tarpit || r.data.tarpitted || []))
+            .catch(() => { });
+    };
+
     useEffect(() => {
         riskAPI.getTopIPs().then(r => setTopIPs(r.data.top || [])).catch(() => { });
         riskAPI.getStats().then(r => setStats(r.data)).catch(() => { });
         if (user) {
             refreshTwoFactorStatus();
+            refreshTarpitStatus();
         }
     }, []);
 
@@ -89,10 +122,44 @@ export default function OverviewPage({ liveAlerts, recentLogs }) {
             riskAPI.getTopIPs()
                 .then(r => setTopIPs(r.data.top || []))
                 .catch(() => { });
+            refreshTarpitStatus();
         }, 15000);
 
         return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        const timer = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    useEffect(() => {
+        if (!tarpitEvents.length) return;
+
+        setTarpitStatus((prev) => {
+            const next = [...prev];
+
+            tarpitEvents.slice(0, 10).forEach((event) => {
+                const normalized = {
+                    ip: event.ipAddress,
+                    riskScore: event.riskScore,
+                    delayMs: event.delayMs,
+                    timestamp: event.timestamp,
+                    ttl: event.ttl ?? 300,
+                    endpoint: event.endpoint,
+                };
+
+                const existingIndex = next.findIndex((item) => item.ip === normalized.ip);
+                if (existingIndex >= 0) {
+                    next[existingIndex] = { ...next[existingIndex], ...normalized };
+                } else {
+                    next.unshift(normalized);
+                }
+            });
+
+            return next.slice(0, 10);
+        });
+    }, [tarpitEvents]);
 
     useEffect(() => {
         if (user) {
@@ -265,6 +332,57 @@ export default function OverviewPage({ liveAlerts, recentLogs }) {
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* ── Tarpit status ── */}
+            <div className="card" style={{ marginBottom: 20 }}>
+                <div className="card-header">
+                    <span className="card-title">TARPIT STATUS</span>
+                    <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.12)', color: 'var(--amber)', borderColor: 'rgba(245, 158, 11, 0.28)' }}>
+                        {tarpitStatus.length} ACTIVE
+                    </span>
+                </div>
+
+                {tarpitStatus.length === 0 ? (
+                    <div className="empty-state">Chưa có IP nào đang bị tarpit</div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {tarpitStatus.map((item) => {
+                            const delayMs = item.delayMs ?? calculateTarpitDelay(item.riskScore);
+                            const eventTime = item.timestamp ? new Date(item.timestamp).getTime() : null;
+                            const elapsed = eventTime ? Math.max(0, now - eventTime) : Math.max(0, (300 - Math.max(item.ttl ?? 0, 0)) * 1000);
+                            const progress = eventTime
+                                ? Math.min(100, (elapsed / delayMs) * 100)
+                                : Math.min(100, ((300 - Math.max(item.ttl ?? 0, 0)) / 300) * 100);
+
+                            return (
+                                <div key={item.ip} style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 10, background: 'var(--bg-panel)' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto auto', gap: 12, alignItems: 'center', marginBottom: 10 }}>
+                                        <span className="ip-tag" style={{ width: 'fit-content' }}>{item.ip}</span>
+                                        <span className="badge" style={{ color: tarpitColor(item.riskScore), background: `${tarpitColor(item.riskScore)}18`, borderColor: `${tarpitColor(item.riskScore)}44` }}>
+                                            Risk {item.riskScore}
+                                        </span>
+                                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)' }}>
+                                            Delay {formatDelay(delayMs)}
+                                        </span>
+                                    </div>
+
+                                    <div className="risk-bar" style={{ height: 8 }}>
+                                        <div
+                                            className="risk-bar-fill"
+                                            style={{ width: `${progress}%`, background: tarpitColor(item.riskScore), transition: 'width 0.9s linear' }}
+                                        />
+                                    </div>
+
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)' }}>
+                                        <span>{item.endpoint || '/api/auth/login'}</span>
+                                        <span>{eventTime ? `${Math.max(0, Math.ceil((delayMs - elapsed) / 1000))}s remaining` : `TTL ${item.ttl ?? '—'}s`}</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             {/* ── Live alerts ── */}

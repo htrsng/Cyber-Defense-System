@@ -22,6 +22,7 @@ function AppInner() {
     const [logs, setLogs] = useState([]);
     const [liveAlerts, setLiveAlerts] = useState([]);
     const [topIPs, setTopIPs] = useState([]);
+    const [tarpitEvents, setTarpitEvents] = useState([]);
 
     // Real-time WebSocket handlers
     const onActivityLog = useCallback((data) => {
@@ -41,9 +42,14 @@ function AppInner() {
         }, ...prev].slice(0, MAX_LOGS));
     }, []);
 
+    const onTarpitActive = useCallback((data) => {
+        setTarpitEvents(prev => [data, ...prev].slice(0, 10));
+    }, []);
+
     useSocket({
         activity_log: onActivityLog,
         security_alert: onSecurityAlert,
+        tarpit_active: onTarpitActive,
     });
 
     if (loading) {
@@ -61,7 +67,7 @@ function AppInner() {
 
     const renderPage = () => {
         switch (page) {
-            case 'overview': return <OverviewPage liveAlerts={liveAlerts} recentLogs={logs} />;
+            case 'overview': return <OverviewPage liveAlerts={liveAlerts} recentLogs={logs} tarpitEvents={tarpitEvents} />;
             case 'logs': return <LiveLogsPage logs={logs} />;
             case 'risk': return <RiskPage topIPs={topIPs} />;
             case 'simulate': return <SimulatePage logs={logs} />;
@@ -78,6 +84,7 @@ function AppInner() {
             currentPage={page}
             onNavigate={setPage}
             liveAlerts={liveAlerts.filter(a => a.severity === 'critical' || a.severity === 'high').length}
+            tarpitCount={tarpitEvents.length}
         >
             {renderPage()}
         </Layout>

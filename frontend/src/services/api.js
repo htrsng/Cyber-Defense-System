@@ -55,6 +55,12 @@ export const eventsAPI = {
     resolve: (id) => api.patch(`/api/events/${id}/resolve`),
 };
 
+export const tarpitAPI = {
+    status: () => api.get('/api/tarpit/status'),
+    clear: (ip) => api.delete(`/api/tarpit/clear/${encodeURIComponent(ip)}`),
+    force: (ip, score) => api.post(`/api/tarpit/force/${encodeURIComponent(ip)}`, { score }),
+};
+
 export const simulateAPI = {
     bruteForce: (config) => api.post('/api/simulate/brute-force', config),
     sqli: (config) => api.post('/api/simulate/sqli', config),

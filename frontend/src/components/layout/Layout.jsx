@@ -12,7 +12,7 @@ const NAV = [
     { icon: '⚔', label: 'Visualizer', path: 'visualizer' },
 ];
 
-export default function Layout({ currentPage, onNavigate, children, liveAlerts = 0 }) {
+export default function Layout({ currentPage, onNavigate, children, liveAlerts = 0, tarpitCount = 0 }) {
     const { user, logout } = useAuth();
     const [socketOnline] = useState(true); // replaced by real socket status in parent
 
@@ -37,6 +37,11 @@ export default function Layout({ currentPage, onNavigate, children, liveAlerts =
                     {liveAlerts > 0 && (
                         <span className="badge critical">
                             ⚠ {liveAlerts} CẢNH BÁO ĐANG HOẠT ĐỘNG
+                        </span>
+                    )}
+                    {tarpitCount > 0 && (
+                        <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.12)', color: 'var(--amber)', borderColor: 'rgba(245, 158, 11, 0.28)' }}>
+                            🕸 {tarpitCount} TARPIT ACTIVE
                         </span>
                     )}
                     <div className="connecting">

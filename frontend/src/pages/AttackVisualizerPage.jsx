@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { simulateAPI } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
+import { useSocket } from "../hooks/useSocket";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ATTACKS = {
@@ -63,7 +64,7 @@ function useAnimFrame(cb) {
 export default function AttackVisualizerPage() {
     const { user } = useAuth();
     const canvasRef = useRef(null);
-    const stateRef = useRef({ particles: [], blocked: false, phase: "idle", attackType: null, tick: 0 });
+    const stateRef = useRef({ particles: [], blocked: false, phase: "idle", attackType: null, tick: 0, shieldFlash: 0 });
     const [phase, setPhase] = useState("idle");      // idle | running | blocked | defended
     const [attackType, setAttackType] = useState("brute");
     const [log, setLog] = useState([]);
@@ -80,6 +81,27 @@ export default function AttackVisualizerPage() {
     const [selectedForCompare, setSelectedForCompare] = useState(null);
     const [backendConnected, setBackendConnected] = useState(false);
     const timeoutRefs = useRef([]);
+
+    // WebSocket integration — listen for security alerts and tarpit events
+    useSocket({
+        security_alert: (data) => {
+            if (stateRef.current.phase === "running") {
+                stateRef.current.shieldFlash = 10;
+                setLog(prev => [{
+                    msg: `🛡 ${data.type?.replace(/_/g, ' ')} — Score: ${data.riskScore}`,
+                    type: 'success',
+                    ts: new Date().toLocaleTimeString('en', { hour12: false })
+                }, ...prev].slice(0, 20));
+            }
+        },
+        tarpit_active: (data) => {
+            setLog(prev => [{
+                msg: `🕸 TARPIT: ${data.ipAddress} delayed ${(data.delayMs / 1000).toFixed(0)}s`,
+                type: 'warn',
+                ts: new Date().toLocaleTimeString('en', { hour12: false })
+            }, ...prev].slice(0, 20));
+        }
+    });
 
     // Check backend connection on mount
     useEffect(() => {
@@ -217,6 +239,21 @@ export default function AttackVisualizerPage() {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("🛡", fx, fy);
+
+        // Shield flash effect
+        if (s.shieldFlash > 0) {
+            s.shieldFlash--;
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI / 3) * i - Math.PI / 6;
+                ctx.lineTo(fx + (20 + s.shieldFlash * 2.5) * Math.cos(angle),
+                    fy + (20 + s.shieldFlash * 2.5) * Math.sin(angle));
+            }
+            ctx.closePath();
+            ctx.strokeStyle = '#00ff88' + Math.floor(((10 - s.shieldFlash) / 10) * 255).toString(16).padStart(2, '0');
+            ctx.lineWidth = 3 - (s.shieldFlash / 10) * 2;
+            ctx.stroke();
+        }
 
         // Labels
         ctx.font = "bold 11px 'Share Tech Mono', monospace";
@@ -475,6 +512,66 @@ export default function AttackVisualizerPage() {
 
     const riskColor = (s) => s >= 80 ? "#ff3d5a" : s >= 60 ? "#ff7a1a" : s >= 35 ? "#ffb300" : s >= 15 ? "#00d4ff" : "#00ff88";
 
+    // ── Run full attack chain ──────────────────────────────────────────────────
+    const runFullChain = useCallback(async () => {
+        const chainAttacks = ['recon', 'brute', 'sqli'];
+        const attackDelay = (atk) => {
+            if (atk === 'recon') return 8 * 600 + 2000;
+            if (atk === 'brute') return 15 * 600 + 2000;
+            return 5 * 600 + 2000;
+        };
+
+        setLog(prev => [{
+            msg: `► Starting full attack chain sequence...`,
+            type: 'warn',
+            ts: new Date().toLocaleTimeString('en', { hour12: false })
+        }, ...prev]);
+
+        for (let idx = 0; idx < chainAttacks.length; idx++) {
+            const atk = chainAttacks[idx];
+            setAttackType(atk);
+
+            await new Promise(r => setTimeout(r, 100));
+
+            setLog(prev => [{
+                msg: `[${idx + 1}/3] Launching ${atk.toUpperCase()} attack...`,
+                type: 'warn',
+                ts: new Date().toLocaleTimeString('en', { hour12: false })
+            }, ...prev]);
+
+            // Quick visual simulation
+            const packets = ATTACKS[atk].packets;
+            for (let i = 0; i < packets; i++) {
+                await new Promise(r => setTimeout(r, 500));
+                setStats(prev => ({
+                    attempts: i + 1,
+                    blocked: i >= Math.floor(packets * 0.7) ? prev.blocked + 1 : prev.blocked,
+                    riskScore: Math.min(95, Math.floor(((i + 1) / packets) * 80))
+                }));
+                spawnPacket(i >= Math.floor(packets * 0.7));
+            }
+
+            setLog(prev => [{
+                msg: `✓ ${atk.toUpperCase()} attack neutralized by defenses`,
+                type: 'success',
+                ts: new Date().toLocaleTimeString('en', { hour12: false })
+            }, ...prev]);
+
+            stateRef.current.phase = 'defended';
+            setPhase('defended');
+
+            await new Promise(r => setTimeout(r, 2000));
+            reset();
+            await new Promise(r => setTimeout(r, 500));
+        }
+
+        setLog(prev => [{
+            msg: `✓ Full attack chain completed — all 3 attack vectors successfully defended`,
+            type: 'success',
+            ts: new Date().toLocaleTimeString('en', { hour12: false })
+        }, ...prev]);
+    }, [spawnPacket]);
+
     return (
         <div style={{
             minHeight: "100vh", background: "var(--bg-base)",
@@ -634,20 +731,36 @@ export default function AttackVisualizerPage() {
                 {/* Right panel — log + controls */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-                    {/* Launch button */}
-                    <button onClick={phase === "running" ? () => setIsPaused(!isPaused) : phase === "defended" ? reset : runAttack}
-                        disabled={isLoading && phase !== "running"}
-                        style={{
-                            padding: "14px", borderRadius: 6, cursor: (isLoading && phase !== "running") ? "not-allowed" : "pointer",
-                            fontFamily: "var(--font-head)", fontWeight: 700, fontSize: 15,
-                            letterSpacing: "0.08em", transition: "all 0.2s",
-                            background: phase === "defended" ? "#00ff8822" : phase === "running" ? "var(--bg-alt)" : `${ATTACKS[attackType].color}22`,
-                            color: phase === "defended" ? "#00ff88" : phase === "running" ? (isPaused ? "#ffb300" : "var(--text-muted)") : ATTACKS[attackType].color,
-                            border: `1px solid ${phase === "defended" ? "#00ff8844" : phase === "running" ? "var(--border)" : ATTACKS[attackType].color + "66"}`,
-                            opacity: (isLoading && phase !== "running") ? 0.6 : 1,
-                        }}>
-                        {phase === "running" ? (isPaused ? "▶ RESUME" : "⏸ PAUSE") : phase === "defended" ? "↺ RESET" : `⚡ LAUNCH ${ATTACKS[attackType].label.toUpperCase()}`}
-                    </button>
+                    {/* Launch buttons container */}
+                    <div style={{ display: "flex", gap: 12 }}>
+                        <button onClick={phase === "running" ? () => setIsPaused(!isPaused) : phase === "defended" ? reset : runAttack}
+                            disabled={isLoading && phase !== "running"}
+                            style={{
+                                flex: 1, padding: "14px", borderRadius: 6, cursor: (isLoading && phase !== "running") ? "not-allowed" : "pointer",
+                                fontFamily: "var(--font-head)", fontWeight: 700, fontSize: 15,
+                                letterSpacing: "0.08em", transition: "all 0.2s",
+                                background: phase === "defended" ? "#00ff8822" : phase === "running" ? "var(--bg-alt)" : `${ATTACKS[attackType].color}22`,
+                                color: phase === "defended" ? "#00ff88" : phase === "running" ? (isPaused ? "#ffb300" : "var(--text-muted)") : ATTACKS[attackType].color,
+                                border: `1px solid ${phase === "defended" ? "#00ff8844" : phase === "running" ? "var(--border)" : ATTACKS[attackType].color + "66"}`,
+                                opacity: (isLoading && phase !== "running") ? 0.6 : 1,
+                            }}>
+                            {phase === "running" ? (isPaused ? "▶ RESUME" : "⏸ PAUSE") : phase === "defended" ? "↺ RESET" : `⚡ LAUNCH ${ATTACKS[attackType].label.toUpperCase()}`}
+                        </button>
+                        <button onClick={runFullChain}
+                            disabled={phase === "running" || isLoading}
+                            style={{
+                                padding: "14px 18px", borderRadius: 6, cursor: (phase === "running" || isLoading) ? "not-allowed" : "pointer",
+                                fontFamily: "var(--font-head)", fontWeight: 700, fontSize: 15,
+                                letterSpacing: "0.08em", transition: "all 0.2s",
+                                background: "#00d4ff22",
+                                color: "#00d4ff",
+                                border: "1px solid #00d4ff66",
+                                opacity: (phase === "running" || isLoading) ? 0.6 : 1,
+                                whiteSpace: "nowrap"
+                            }}>
+                            ⚡ CHAIN
+                        </button>
+                    </div>
 
                     {/* Speed control */}
                     {phase === "running" && (
