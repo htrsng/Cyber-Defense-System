@@ -7,6 +7,8 @@
 const ActivityLog = require('../models/ActivityLog');
 const SecurityEvent = require('../models/SecurityEvent');
 const { calculateRiskScore } = require('./riskScorer');
+const { sendCriticalAlert } = require('./emailService');
+const geoip = require('geoip-lite');
 
 // ─── Thresholds ───────────────────────────────────────────────────────────────
 
@@ -54,6 +56,14 @@ async function detectBruteForce(io) {
             riskScore: score,
             evidence: { failedAttempts: count, windowMinutes: 10, reasons },
         });
+
+        // Send email alert for critical/high severity
+        if (event.severity === 'critical' || event.severity === 'high') {
+            const geo = geoip.lookup(ip);
+            sendCriticalAlert(event, geo).catch(e =>
+                console.error('Email alert failed:', e.message)
+            );
+        }
 
         // Ghi anomaly log
         await ActivityLog.create({

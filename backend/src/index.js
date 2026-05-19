@@ -59,6 +59,8 @@ app.use('/api/events', require('./routes/events'));
 app.use('/api/simulate', require('./routes/simulate'));
 app.use('/api/risk', require('./routes/risk'));
 app.use('/api/xss', require('./routes/xss'));
+app.use('/api/reports', authMiddleware, require('./routes/reports'));
+app.use('/api/admin', authMiddleware, adminMiddleware, require('./routes/admin'));
 
 // Honeypot endpoints — bẫy reconnaissance
 app.all('/admin/secret', require('./middleware/honeypot'));
@@ -78,6 +80,15 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 const { runAnomalyDetection } = require('./services/anomalyDetector');
+const { sendDailyReport } = require('./services/emailService');
+
+// Function to calculate milliseconds until midnight
+function msUntilMidnight() {
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  return midnight - now;
+}
 
 (async () => {
   await connectDB();
@@ -92,5 +103,45 @@ const { runAnomalyDetection } = require('./services/anomalyDetector');
     }, 2 * 60 * 1000);
 
     console.log(`🤖 Anomaly detector scheduled (every 2 min)`);
+
+    // Schedule daily report at midnight
+    setTimeout(async function scheduleDailyReport() {
+      try {
+        const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const [totalEvents, criticalEvents] = await Promise.all([
+          require('./models/ActivityLog').countDocuments({ createdAt: { $gte: since24h } }),
+          require('./models/ActivityLog').countDocuments({ severity: { $in: ['critical', 'high'] }, createdAt: { $gte: since24h } }),
+        ]);
+
+        const topIPs = await require('./models/SecurityEvent').aggregate([
+          { $match: { createdAt: { $gte: since24h } } },
+          { $group: { _id: '$ipAddress', count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+          { $limit: 10 },
+          { $project: { ipAddress: '$_id', count: 1, _id: 0 } },
+        ]);
+
+        const unresolvedThreats = await require('./models/SecurityEvent').countDocuments({
+          resolved: false,
+          severity: { $in: ['critical', 'high'] },
+        });
+
+        await sendDailyReport({
+          totalEvents,
+          criticalEvents,
+          topIPs,
+          unresolvedThreats,
+        }).catch(console.error);
+
+        console.log('📊 Daily report sent');
+      } catch (err) {
+        console.error('Daily report scheduling error:', err.message);
+      }
+
+      // Schedule next report for tomorrow at midnight
+      setTimeout(scheduleDailyReport, 24 * 60 * 60 * 1000);
+    }, msUntilMidnight());
+
+    console.log(`📊 Daily report scheduler active`);
   });
 })();

@@ -1,5 +1,7 @@
 const ActivityLog = require('../models/ActivityLog');
 const SecurityEvent = require('../models/SecurityEvent');
+const { sendCriticalAlert } = require('../services/emailService');
+const geoip = require('geoip-lite');
 
 module.exports = async (req, res) => {
   const ipAddress = req.ip || req.connection.remoteAddress;
@@ -32,7 +34,7 @@ module.exports = async (req, res) => {
     });
 
     // Tạo security event
-    await SecurityEvent.create({
+    const event = await SecurityEvent.create({
       type: 'HONEYPOT_ACCESS',
       ipAddress,
       description: `Honeypot triggered: ${req.method} ${req.path}`,
@@ -44,6 +46,12 @@ module.exports = async (req, res) => {
         method: req.method,
       },
     });
+
+    // Send email alert for honeypot access
+    const geo = geoip.lookup(ipAddress);
+    sendCriticalAlert(event, geo).catch(e =>
+      console.error('Email alert failed:', e.message)
+    );
 
     // Push real-time tới dashboard
     io?.emit('security_alert', {

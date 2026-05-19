@@ -16,7 +16,7 @@ const SecurityEvent = require('../models/SecurityEvent');
 
 async function seedUsers() {
     const users = [
-        { email: 'admin@cyberdef.io', password: 'Admin@123', role: 'admin' },
+        { email: 'tranghuyen20051312@gmail.com', password: 'Admin@123', role: 'admin' },
         { email: 'viewer@cyberdef.io', password: 'Viewer@123', role: 'viewer' },
     ];
 
@@ -75,7 +75,7 @@ function buildActivityLogs() {
         const timestamp = new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000);
 
         const metadataByType = {
-            LOGIN_SUCCESS: { user: index % 2 === 0 ? 'admin@cyberdef.io' : 'viewer@cyberdef.io' },
+            LOGIN_SUCCESS: { user: index % 2 === 0 ? 'tranghuyen20051312@gmail.com' : 'viewer@cyberdef.io' },
             LOGIN_FAILED: { user: 'unknown@cyberdef.io', reason: 'Invalid credentials' },
             HONEYPOT_TRIGGERED: { endpoint: endpoints[index % endpoints.length], method: 'GET' },
             RATE_LIMIT_HIT: { endpoint: '/api/auth/login', threshold: 100 },

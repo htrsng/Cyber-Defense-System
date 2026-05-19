@@ -2,6 +2,7 @@ const ActivityLog = require('../models/ActivityLog');
 const SecurityEvent = require('../models/SecurityEvent');
 const redis = require('../config/redis');
 const { calculateRiskScore } = require('../services/riskScorer');
+const { sendCriticalAlert } = require('../services/emailService');
 const axios = require('axios');
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
@@ -19,6 +20,8 @@ async function bruteForce(req, res, io) {
                 eventType: 'ATTACK_SIM_BRUTE_FORCE',
                 ipAddress: attackerIp,
                 severity: 'high',
+                riskScore: Math.min(100, i * 7),
+                riskReasons: [`Attempt ${i} of ${attempts}`],
                 metadata: {
                     attempt: i,
                     password: `fakepass${i}`,
@@ -236,7 +239,7 @@ async function honeypot(req, res, io) {
                 },
             });
 
-            await SecurityEvent.create({
+            const event = await SecurityEvent.create({
                 type: 'HONEYPOT_ACCESS',
                 ipAddress: attackerIp,
                 description: `Honeypot endpoint accessed: ${endpoint}`,
@@ -247,6 +250,11 @@ async function honeypot(req, res, io) {
                     method: 'GET',
                 },
             });
+
+            // Send email alert for honeypot access
+            sendCriticalAlert(event, req.geoInfo).catch(e =>
+                console.error('Email alert failed:', e.message)
+            );
 
             socket?.emit('activity_log', {
                 eventType: 'HONEYPOT_TRIGGERED',

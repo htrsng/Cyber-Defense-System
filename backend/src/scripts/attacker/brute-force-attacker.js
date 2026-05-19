@@ -57,7 +57,7 @@ async function main() {
 
         try {
             const response = await requestJson(TARGET, {
-                email: 'admin@cyberdef.io',
+                email: 'tranghuyen20051312@gmail.com',
                 password,
             });
 
