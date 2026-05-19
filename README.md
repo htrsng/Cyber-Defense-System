@@ -1,833 +1,878 @@
-# 🛡️ Hệ Thống Bảo Vệ Mạng Dùng AI & Giám Sát Mối Đe Dọa
+<div align="center">
 
-> **Nền tảng Giám Sát An Ninh Mạng Cấp Enterprise** với Phát Hiện Mối Đe Dọa Thời Gian Thực, AI Risk Scoring Engine, và Attack Simulation Framework
+# ◈ CYBERDEF
+### AI-Powered Cyber Defense & Threat Monitoring System
 
-[![Node.js](https://img.shields.io/badge/Node.js-v18%2B-green)](https://nodejs.org/)
-[![React](https://img.shields.io/badge/React-v18%2B-blue)](https://reactjs.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-7.0-brightgreen)](https://www.mongodb.com/)
-[![Docker](https://img.shields.io/badge/Docker-Latest-blue)](https://www.docker.com/)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+![Version](https://img.shields.io/badge/version-1.0.0-00d4ff?style=for-the-badge)
+![Node](https://img.shields.io/badge/Node.js-20-339933?style=for-the-badge&logo=node.js)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
+![MongoDB](https://img.shields.io/badge/MongoDB-7.0-47A248?style=for-the-badge&logo=mongodb)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker)
+![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
 
----
+> Hệ thống giám sát an ninh mạng thời gian thực — phát hiện, phân tích và phản ứng với các cuộc tấn công tự động bằng AI Rule-based Engine.
 
-## 📋 Mục Lục
+[Demo](#-demo) • [Tính năng](#-tính-năng) • [Cài đặt](#-cài-đặt-nhanh) • [Kiến trúc](#-kiến-trúc-hệ-thống) • [API](#-api-reference)
 
-- [Tổng Quan](#tổng-quan)
-- [Tính Năng Chính](#tính-năng-chính)
-- [Stack Công Nghệ](#stack-công-nghệ)
-- [Kiến Trúc Hệ Thống](#kiến-trúc-hệ-thống)
-- [Khởi Động Nhanh](#khởi-động-nhanh)
-- [Cấu Trúc Dự Án](#cấu-trúc-dự-án)
-- [Thành Phần Chính](#thành-phần-chính)
-- [Tài Liệu API](#tài-liệu-api)
-- [Tính Năng Bảo Mật](#tính-năng-bảo-mật)
-- [Schema Cơ Sở Dữ Liệu](#schema-cơ-sở-dữ-liệu)
-- [Cấu Hình](#cấu-hình)
-- [Phát Triển](#phát-triển)
-- [Đóng Góp](#đóng-góp)
+</div>
 
 ---
 
-## 🎯 Tổng Quan
+## 📋 Mục lục
 
-**Cyber Defense System** là nền tảng giám sát an ninh mạng toàn diện được thiết kế để phát hiện, phân tích và ứng phó các mối đe dọa mạng trong thời gian thực. Nó kết hợp cơ chế tính điểm rủi ro dựa trên Machine Learning với Anomaly Detection để cung cấp các khả năng Threat Intelligence cấp Enterprise và xử lý sự cố.
-
-### Khả Năng Cốt Lõi
-- 🔍 **Phát Hiện Mối Đe Dọa Thời Gian Thực**: Xác định Brute Force, SQL Injection, và Reconnaissance attempts
-- 📊 **AI Risk Scoring**: Tính toán mức đe dọa (0-100) dựa trên phân tích đa yếu tố
-- 🚨 **Anomaly Detection Tự Động**: Hệ thống tự học phát hiện những sai lệch hành vi
-- 🎮 **Attack Simulation Framework**: Kiểm tra khả năng chống chịu với các cuộc tấn công mô phỏng
-- 🪤 **Honeypot Deployment**: Triển khai cơ sở hạ tầng lừa dối để phát hiện Reconnaissance
-- 📡 **Dashboard Real-Time**: Giám sát và cảnh báo trực tiếp dùng WebSocket
-- 🔐 **Role-Based Access Control**: Phân quyền Admin và Viewer với kiểm soát chi tiết
-
----
-
-## ✨ Tính Năng Chính
-
-### 1. **Threat Detection Engine (Động Cơ Phát Hiện Mối Đe Dọa)**
-| Loại Mối Đe Dọa | Phương Pháp Phát Hiện | Trọng Số Rủi Ro | Ngưỡng Auto-Block |
-|------------------|---------------------|-----------------|-------------------|
-| Brute Force Attack | Phân tích mẫu đăng nhập thất bại (≥5 trong 10 phút) | 40-60 pts | Risk ≥ 80 |
-| SQL Injection (SQLi) | Phát hiện chữ ký Payload | 50 pts | Risk ≥ 80 |
-| Reconnaissance (Recon) | Truy cập Honeypot endpoint | 35 pts | Risk ≥ 80 |
-| Rate Limit Abuse | Kích hoạt Rate Limiter lặp lại (≥3) | 20 pts | Risk ≥ 80 |
-
-### 2. **Intelligent Risk Scoring (Tính Điểm Rủi Ro Thông Minh)**
-- **Phân Tích Đa Yếu Tố**: Kết hợp các vector tấn công với các mẫu lịch sử
-- **Dynamic Weighting**: Công cụ dựa trên Rules với các ngưỡng có thể cấu hình
-- **Auto-Blocking**: Chặn IP tự động khi risk score ≥80
-- **Evidence Tracking**: Dấu vết kiểm toán chi tiết tất cả các yếu tố tính toán
-
-### 3. **Anomaly Detection (Phát Hiện Bất Thường)**
-- **Scheduled Analysis**: Chạy tự động mỗi 2 phút
-- **Pattern Recognition**: Phát hiện sai lệch từ hành vi cơ sở
-- **Incident Creation**: Tự động tạo Security Events cho bất thường
-- **Độ Nghiêm Trọng**: Low/Medium/High/Critical Severity Levels
-
-### 4. **Security Monitoring (Giám Sát Bảo Mật)**
-- **Activity Logging**: Dấu vết kiểm toán toàn diện tất cả các sự kiện hệ thống
-- **Event Correlation**: Liên kết các sự kiện bảo mật liên quan để điều tra
-- **Incident Management**: Theo dõi, giải quyết và đóng các sự kiện bảo mật
-- **Metrics & Analytics**: Dữ liệu lịch sử để phân tích xu hướng
+- [Giới thiệu](#-giới-thiệu)
+- [Demo](#-demo)
+- [Tính năng](#-tính-năng)
+- [Kiến trúc hệ thống](#-kiến-trúc-hệ-thống)
+- [Tech Stack](#-tech-stack)
+- [Cài đặt nhanh](#-cài-đặt-nhanh)
+- [Cấu hình môi trường](#-cấu-hình-môi-trường)
+- [Chạy Attack Simulations](#-chạy-attack-simulations)
+- [API Reference](#-api-reference)
+- [Cơ chế phòng thủ](#-cơ-chế-phòng-thủ)
+- [AI Risk Scorer](#-ai-risk-scorer)
+- [Cấu trúc thư mục](#-cấu-trúc-thư-mục)
+- [Tác giả](#-tác-giả)
 
 ---
 
-## 🏗️ Stack Công Nghệ
+## 🎯 Giới thiệu
 
-| Lớp | Công Nghệ | Phiên Bản | Mục Đích |
-|-----|-----------|----------|---------|
-| **Frontend** | React.js + Hooks | 18.0+ | UI & Dashboard Tương Tác |
-| | Tailwind CSS | Latest | Styling Responsive |
-| | Socket.io Client | 4.7+ | Cập Nhật Real-Time |
-| **Backend** | Node.js | 18.0+ | Môi Trường Runtime |
-| | Express.js | 4.19+ | Web Framework |
-| | Socket.io | 4.7+ | Giao Tiếp WebSocket |
-| **Database** | MongoDB | 7.0 | Kho Dữ Liệu Chính |
-| | Redis | 7.2 | Caching & Sessions |
-| **Security** | JWT | - | Token-based Authentication |
-| | Bcryptjs | 2.4+ | Password Hashing |
-| | Helmet.js | 7.1+ | HTTP Headers Security |
-| **Containerization** | Docker | Latest | Container Runtime |
-| | Docker Compose | Latest | Orchestration |
+**CyberDef** là hệ thống giám sát an ninh mạng được xây dựng cho môn **Bảo mật Ứng dụng và Hệ thống**. Hệ thống mô phỏng môi trường bảo mật thực tế với đầy đủ các lớp tấn công và phòng thủ.
 
----
+### Vấn đề đặt ra
 
-## 🎨 Kiến Trúc Hệ Thống
+Các cuộc tấn công mạng ngày càng tinh vi — Brute Force, SQL Injection, XSS, Reconnaissance — xảy ra liên tục mà quản trị viên không thể giám sát thủ công 24/7.
+
+### Giải pháp
+
+CyberDef hoạt động như một **Security Operations Center (SOC)** thu nhỏ:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                       LỚPMẶT TRƯỚC (FRONTEND)               │
-│  React Dashboard (React Router, WebSocket Client)            │
-│  ├── Trang Tổng Quan   ├── Nhật Ký Trực Tiếp ├── Risk View  │
-│  ├── Threat Intelligence ├── Attack Simulator ├── Visualizer │
-└──────────────────┬──────────────────────────────────────────┘
-                   │ HTTP + WebSocket
-┌──────────────────▼──────────────────────────────────────────┐
-│                    API GATEWAY / MIDDLEWARE                  │
-│  • CORS & Security Headers  • Rate Limiting (100 req/min)    │
-│  • JWT Authentication       • IP Validation                  │
-│  • Request Logging          • Error Handling                 │
-└──────────────────┬──────────────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────────────┐
-│                  LỚPLOGIC KINH DOANH (BUSINESS LOGIC)       │
-│  ┌────────────────┐  ┌──────────────────┐  ┌─────────────┐ │
-│  │ Auth Service   │  │ Risk Scoring     │  │ Anomaly     │ │
-│  │                │  │ Engine (Rules)   │  │ Detector    │ │
-│  └────────────────┘  └──────────────────┘  └─────────────┘ │
-│  ┌────────────────┐  ┌──────────────────┐                   │
-│  │ Event Service  │  │ Log Service      │                   │
-│  └────────────────┘  └──────────────────┘                   │
-└──────────────────┬──────────────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────────────┐
-│                    LỚPTRUY CẬP DỮ LIỆU (DATA ACCESS)        │
-│  MongoDB Queries (Mongoose ODM) & Redis Caching              │
-└──────────────────┬──────────────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────────────┐
-│             LỚPLƯU TRỮ DỮ LIỆU BỀN VỮng (PERSISTENT STORAGE)│
-│  MongoDB (Users, Activities, Events)                         │
-│  Redis (Cache, Session Store, Rate Limit Counters)          │
-└──────────────────────────────────────────────────────────────┘
+Tấn công đến ──▶ Phát hiện (AI) ──▶ Phân tích (Risk Score) ──▶ Cảnh báo (Real-time) ──▶ Báo cáo (PDF)
 ```
 
 ---
 
-## 🚀 Khởi Động Nhanh
+## 🎬 Demo
 
-### Yêu Cầu Trước
-- Docker & Docker Compose v2.0+
-- Node.js v18+ (cho phát triển cục bộ)
-- npm v9+ hoặc yarn v3+
+### Split-screen Demo (Attacker vs Defender)
 
-### Cài Đặt
+```
+┌─────────────────────────┬─────────────────────────┐
+│   DASHBOARD (Chrome)    │   TERMINAL (Attacker)   │
+│                         │                         │
+│  ⚠ BRUTE FORCE DETECTED │  [ATTACK] Attempt 1/15  │
+│  IP: 10.0.0.99          │  password: "123456"      │
+│  Risk Score: 60 HIGH    │  → FAILED (401)          │
+│                         │                         │
+│  ◉ LIVE  admin@cyberdef │  [ATTACK] Attempt 5/15  │
+│                         │  → BLOCKED (429)         │
+└─────────────────────────┴─────────────────────────┘
+```
 
-#### Tùy Chọn 1: Docker Compose (Được Khuyến Nghị)
+### Chạy Demo
 
 ```bash
-# Clone repository
+# Terminal 1 — Dashboard
+open http://localhost:3000
+
+# Terminal 2 — Attacker
+cd backend
+npm run attack:recon   # Reconnaissance
+npm run attack:brute   # Brute Force
+npm run attack:sqli    # SQL Injection
+npm run attack:xss     # XSS Attack
+```
+
+---
+
+## ✨ Tính năng
+
+### 🔐 Authentication & Authorization
+| Tính năng | Mô tả |
+|-----------|-------|
+| JWT Authentication | Access token + auto refresh |
+| Two-Factor Auth (2FA) | TOTP với Google Authenticator |
+| bcrypt Password Hashing | Salt rounds = 12 |
+| Role-based Access | Admin / Viewer |
+
+### 🛡 Defense Layers
+| Tính năng | Mô tả |
+|-----------|-------|
+| Rate Limiting | IP-based throttle với Redis counter |
+| IP Blocking | Auto-block khi Risk Score ≥ 60 |
+| Honeypot Endpoints | 6 fake endpoints bẫy attacker |
+| GeoIP Blocking | Block theo quốc gia (KP, IR, CU, SY) |
+| Tarpit Middleware | Delay response 3–30s cho suspicious IP |
+| CSP Headers | Content Security Policy chống XSS |
+| JWT Blacklist | Token invalidation khi logout |
+
+### ⚡ Attack Simulations
+| Tấn công | Mô tả | Phòng thủ |
+|----------|-------|-----------|
+| Brute Force | 15 password attempts | Rate limiter + IP block |
+| SQL Injection | 5 SQLi payloads | ORM parameterized queries |
+| Reconnaissance | 8 endpoint probes | Honeypot + instant flag |
+| XSS Injection | 5 script payloads | CSP + input sanitization |
+
+### 🤖 AI Risk Scorer
+| Rule | Weight | Trigger |
+|------|--------|---------|
+| Brute Force Moderate | +40 | ≥5 failed logins / 10 min |
+| Brute Force Aggressive | +20 | ≥10 failed logins |
+| Honeypot Access | +35 | Accessed trap endpoint |
+| Rate Limit Abuse | +20 | ≥3 rate limit hits |
+| SQL Injection | +50 | SQLi payload detected |
+| Suspicious Hour | +10 | Activity 2am–5am |
+| Endpoint Scanning | +15 | ≥8 unique endpoints / 5 min |
+| Multiple Attack Types | +20 | ≥2 attack types same IP |
+
+### 📊 Dashboard & Reporting
+| Tính năng | Mô tả |
+|-----------|-------|
+| Real-time Dashboard | WebSocket push, không cần F5 |
+| Live Activity Log | Stream tất cả events với filter |
+| Threat Management | Xem + resolve security events |
+| Risk Score Analyzer | Lookup bất kỳ IP, xem lý do |
+| Attack Visualizer | Canvas animation real-time |
+| XSS Playground | So sánh vulnerable vs protected |
+| PDF Security Report | Export báo cáo đầy đủ |
+| Email Alerts | Tự động gửi khi có CRITICAL threat |
+
+---
+
+## 🏗 Kiến trúc hệ thống
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    LAYER 1: CLIENT                       │
+│    React + Custom CSS + Socket.io Client + Recharts     │
+│  [Dashboard] [Logs] [Threats] [Risk] [Simulate] [Viz]   │
+└──────────────────────┬──────────────────────────────────┘
+                       │ HTTP + WebSocket
+┌──────────────────────▼──────────────────────────────────┐
+│                  LAYER 2: API GATEWAY                    │
+│                  Express.js + Socket.io                  │
+│  [JWT] [Rate Limit] [GeoIP] [Tarpit] [CSP] [Honeypot]  │
+└──────────────────────┬──────────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────┐
+│                  LAYER 3: SERVICES                       │
+│  [Auth] [LogService] [RiskScorer] [AnomalyDetector]     │
+│  [EmailService] [ReportService] [TwoFactor]              │
+└────────────┬─────────────────────┬──────────────────────┘
+             │                     │
+┌────────────▼──────┐   ┌─────────▼──────────────────────┐
+│   LAYER 4: DATA   │   │     LAYER 5: SIMULATION         │
+│  MongoDB 7.0      │   │  brute-force-attacker.js        │
+│  Redis 7.2        │   │  sqli-attacker.js               │
+│  (In-memory)      │   │  recon-attacker.js              │
+└───────────────────┘   │  xss-attacker.js                │
+                        └────────────────────────────────┘
+```
+
+### Data Flow khi có tấn công
+
+```
+Attacker Request
+      │
+      ▼
+GeoIP Check ──── Blocked Country? ──▶ 403 Forbidden
+      │
+      ▼
+Rate Limiter ─── Too many requests? ─▶ 429 Too Many
+      │
+      ▼
+Honeypot ──────── Trap endpoint? ────▶ 404 (fake) + Log CRITICAL
+      │
+      ▼
+Tarpit ─────────── High risk IP? ────▶ Delay 3-30s
+      │
+      ▼
+Controller Logic
+      │
+      ├──▶ ActivityLog.create()
+      │         │
+      │         ▼
+      │    AI Risk Scorer ──▶ calculateRiskScore(ip)
+      │         │
+      │         ▼
+      │    Redis counters update
+      │
+      ├──▶ Socket.io emit('activity_log') ──▶ Dashboard real-time
+      │
+      ├──▶ AnomalyDetector (nếu high-priority event)
+      │         │
+      │         ▼
+      │    SecurityEvent.create()
+      │         │
+      │         ▼
+      │    EmailService.sendCriticalAlert() (nếu CRITICAL)
+      │
+      └──▶ Response to attacker
+```
+
+---
+
+## 🛠 Tech Stack
+
+| Layer | Technology | Version | Mục đích |
+|-------|-----------|---------|----------|
+| Frontend | React | 18.3.1 | UI Framework |
+| Frontend | Custom CSS + Design Tokens | - | Styling (cyberpunk theme) |
+| Frontend | Socket.io Client | 4.7.5 | Real-time updates |
+| Frontend | React Router | 6.23.1 | Client-side routing |
+| Frontend | Recharts | 2.12.7 | Charts & graphs |
+| Frontend | QR Code React | 4.2.0 | QR code generation |
+| Frontend | date-fns | 3.6.0 | Date formatting |
+| Frontend | Axios | 1.7.2 | HTTP client |
+| Backend | Node.js | 20 | Runtime |
+| Backend | Express.js | 4.19 | API Framework |
+| Backend | Socket.io | 4.7.5 | WebSocket server |
+| Backend | Mongoose | 8.4 | MongoDB ODM |
+| Backend | ioredis | 5.4.1 | Redis client |
+| Backend | jsonwebtoken | 9.0.2 | JWT auth |
+| Backend | bcryptjs | 2.4.3 | Password hashing |
+| Backend | speakeasy | 2.0.0 | 2FA TOTP |
+| Backend | geoip-lite | 1.4.10 | IP geolocation |
+| Backend | nodemailer | 8.0.7 | Email alerts |
+| Backend | pdfkit | 0.17.2 | PDF generation |
+| Backend | uuid | 10.0.0 | Unique ID generation |
+| Backend | winston | 3.13.0 | Logging framework |
+| Backend | helmet | 7.1.0 | Security headers |
+| Backend | cors | 2.8.5 | Cross-origin requests |
+| Backend | morgan | 1.10.0 | HTTP request logger |
+| Backend | dotenv | 16.4.5 | Environment variables |
+| Backend | express-rate-limit | 7.3.1 | Rate limiting |
+| Database | MongoDB | 7.0 | Primary database |
+| Cache | Redis | 7.2-alpine | Rate limiting, sessions |
+| Container | Docker Compose | 2.x | Dev environment |
+
+---
+
+## 🚀 Cài đặt nhanh
+
+### Yêu cầu
+
+- Docker Desktop (Windows/Mac) hoặc Docker Engine (Linux)
+- Node.js 20+ (cho attack scripts)
+- Git
+
+### 1. Clone repository
+
+```bash
 git clone https://github.com/htrsng/Cyber-Defense-System.git
-cd Cyber-Defense-System
-
-# Sao chép cấu hình môi trường
-cp backend/.env.example backend/.env
-
-# Khởi động tất cả các dịch vụ (MongoDB, Redis, Backend, Frontend)
-docker compose up -d
-
-# Giám sát logs
-docker compose logs -f backend
-docker compose logs -f frontend
-
-# Truy cập ứng dụng
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:5000
-# MongoDB: localhost:27017
-# Redis: localhost:6379
+cd cyber-defense-step1
 ```
 
-#### Tùy Chọn 2: Phát Triển Cục Bộ
+### 2. Cấu hình môi trường
 
 ```bash
-# Cài đặt backend dependencies
+cp backend/.env.example backend/.env
+# Chỉnh sửa .env nếu cần (xem phần bên dưới)
+```
+
+### 3. Bật hệ thống
+
+```bash
+docker compose up -d
+```
+
+### 4. Kiểm tra containers
+
+```bash
+docker compose ps
+```
+
+Kết quả mong đợi:
+```
+NAME                STATUS    PORTS
+cyberdef_backend    Up        0.0.0.0:5000->5000/tcp
+cyberdef_frontend   Up        0.0.0.0:3000->3000/tcp
+cyberdef_mongo      Up        0.0.0.0:27017->27017/tcp
+cyberdef_redis      Up        0.0.0.0:6379->6379/tcp
+```
+
+### 5. Seed dữ liệu demo
+
+```bash
 cd backend
 npm install
-NODE_ENV=development npm run dev
-
-# Trong terminal khác, cài đặt frontend dependencies
-cd frontend
-npm install
-npm start
+npm run seed
 ```
 
-### Dọn Dẹp
+### 6. Truy cập hệ thống
+
+| Service | URL | Thông tin |
+|---------|-----|-----------|
+| Dashboard | http://localhost:3000 | UI chính |
+| Backend API | http://localhost:5000 | REST API |
+| Health Check | http://localhost:5000/health | Trạng thái |
+
+### 7. Đăng nhập
+
+```
+Email:    tranghuyen20051312@gmail.com
+Password: Admin@123
+Role:     Admin
+```
+
+Hoặc:
+```
+Email:    viewer@cyberdef.io
+Password: Viewer@123
+Role:     Viewer
+```
+
+---
+
+## ⚙ Cấu hình môi trường
+
+File `backend/.env` (local development):
+
+```env
+# Server
+NODE_ENV=development
+PORT=5000
+
+# MongoDB (local)
+MONGODB_URI=mongodb://admin:secret123@localhost:27017/cyberdefense?authSource=admin
+
+# Redis (local)
+REDIS_URL=redis://:redis123@localhost:6379
+
+# JWT (thay bằng random string dài trong production)
+JWT_SECRET=your_super_secret_jwt_key_change_in_production
+JWT_EXPIRES_IN=7d
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=60000
+RATE_LIMIT_MAX=100
+
+# GeoIP Security
+BLOCKED_COUNTRIES=KP,IR,CU,SY
+BLOCK_TOR=true
+
+# Email Alerts (Gmail App Password)
+EMAIL_FROM=your.email@gmail.com
+EMAIL_APP_PASSWORD=xxxx_xxxx_xxxx_xxxx
+EMAIL_TO=tranghuyen20051312@gmail.com
+
+# Frontend URL (cho CORS và email links)
+FRONTEND_URL=localhost:3000
+```
+
+**Note:** File `.env.example` có ví dụ với MongoDB Atlas (cloud):
+```env
+MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/?appName=CyberDefense
+```
+
+### Tạo Gmail App Password
+
+```
+1. Vào https://myaccount.google.com/security
+2. Bật 2-Step Verification
+3. Tìm "App passwords" → Tạo mới → Mail + Windows
+4. Copy 16 ký tự vào EMAIL_APP_PASSWORD (định dạng: xxxx_xxxx_xxxx_xxxx)
+```
+
+---
+
+## ⚔ Chạy Attack Simulations
+
+Cài dependencies cho attack scripts:
 
 ```bash
-# Dừng tất cả các dịch vụ
-docker compose down
+cd backend && npm install
+```
 
-# Xóa tất cả dữ liệu (reset database)
-docker compose down -v
+### Thứ tự demo chuẩn
+
+```bash
+# Bước 1: Reconnaissance — do thám hệ thống
+npm run attack:recon
+
+# Bước 2: Brute Force — dò mật khẩu
+npm run attack:brute
+
+# Bước 3: SQL Injection — bypass authentication
+npm run attack:sqli
+
+# Bước 4: XSS Attack — script injection
+npm run attack:xss
+
+# Bước 5: Tarpit demo — thấy delay tăng dần
+npm run attack:tarpit
+```
+
+### Kết quả mong đợi trên Dashboard
+
+| Attack | Alert Type | Risk Score | Level |
+|--------|-----------|-----------|-------|
+| Recon | HONEYPOT TRIGGERED | 95 | CRITICAL |
+| Brute Force | BRUTE FORCE DETECTED | 60–100 | HIGH/CRITICAL |
+| SQLi | SQLI DETECTED | 50–80 | HIGH |
+| XSS | XSS DETECTED | 85 | CRITICAL |
+
+---
+
+## 📡 API Reference
+
+### Authentication
+
+```bash
+# Đăng ký
+POST /api/auth/register
+Body: { "email": "user@example.com", "password": "Pass@123", "role": "admin" }
+
+# Đăng nhập
+POST /api/auth/login
+Body: { "email": "tranghuyen20051312@gmail.com", "password": "Admin@123" }
+Response: { "token": "eyJ...", "user": {...} }
+
+# Thông tin user hiện tại
+GET /api/auth/me
+Headers: Authorization: Bearer <token>
+```
+
+### Authentication (cont.)
+
+```bash
+# Logout
+POST /api/auth/logout
+Headers: Authorization: Bearer <token>
+Response: { "message": "Logged out" }
+```
+
+### 2FA (Two-Factor Authentication)
+
+```bash
+# Setup 2FA — lấy QR code
+POST /api/auth/2fa/setup
+Headers: Authorization: Bearer <token>
+Response: { "qrCodeUrl": "data:image/png...", "secret": "BASE32SECRET" }
+
+# Verify TOTP và bật 2FA (sau khi scan QR)
+POST /api/auth/2fa/verify
+Headers: Authorization: Bearer <token>
+Body: { "token": "123456" }
+Response: { "success": true, "message": "2FA enabled" }
+
+# Validate TOTP khi login (nếu 2FA đã bật)
+POST /api/auth/2fa/validate
+Body: { "token": "123456", "userId": "..." }
+Response: { "token": "new_jwt_token", "user": {...} }
+
+# Get 2FA status
+GET /api/auth/2fa/status
+Headers: Authorization: Bearer <token>
+Response: { "enabled": true, "backupCodes": [...] }
+
+# Disable 2FA
+POST /api/auth/2fa/disable
+Headers: Authorization: Bearer <token>
+Body: { "password": "current_password" }
+Response: { "message": "2FA disabled" }
+```
+
+### Risk Score
+
+```bash
+# Score cho 1 IP
+GET /api/risk/:ip
+Response: { "score": 85, "level": "critical", "reasons": [...], "signals": {...} }
+
+# Score cho nhiều IPs cùng lúc (batch)
+POST /api/risk/batch
+Body: { "ips": ["10.0.0.1", "10.0.0.2", "10.0.0.3"] }
+Response: { "results": [{...}, {...}], "count": 3 }
+
+# Top 10 IPs nguy hiểm nhất (từ logs 1 giờ gần đây)
+GET /api/risk/top/ips
+Response: { "top": [{ "ip": "10.0.0.99", "score": 100, "level": "critical" }], "total": 25 }
+
+# Thống kê tổng quan (24h, critical events, threats)
+GET /api/risk/stats/overview
+Response: { "last24h": { "totalEvents": 145, "criticalEvents": 12 }, "unresolvedThreats": 3, "topEventTypes": [...] }
+
+# Trigger manual anomaly detection scan (admin only)
+POST /api/risk/analyze
+Headers: Authorization: Bearer <token>
+Response: { "message": "Anomaly detection completed", "ts": "2024-01-01T12:00:00Z" }
+```
+
+### Attack Simulation
+
+```bash
+# Brute Force
+POST /api/simulate/brute-force
+Body: { "attempts": 15, "delayMs": 300 }
+Response: { "attempts": 15, "finalRiskScore": 60, "blocked": true }
+
+# SQL Injection
+POST /api/simulate/sqli
+Response: { "payloadsTested": 5, "riskScore": 80 }
+
+# Honeypot trigger
+POST /api/simulate/honeypot
+Response: { "endpointsHit": 5, "riskScore": 95 }
+```
+
+### XSS Demo
+
+```bash
+# Endpoint không được bảo vệ (demo only)
+POST /api/xss/vulnerable
+Body: { "input": "<script>alert('xss')</script>", "type": "stored" }
+
+# Endpoint được bảo vệ
+POST /api/xss/protected
+Body: { "input": "<script>alert('xss')</script>" }
+Response: { "blocked": true, "sanitized": "&lt;script&gt;..." }
+
+# Auto simulate 5 payloads
+POST /api/xss/simulate
+```
+
+### Reports
+
+```bash
+# Download PDF report
+GET /api/reports/security?hours=24
+Headers: Authorization: Bearer <token>
+Response: PDF file download
+```
+
+### GeoIP & Country Blocking
+
+```bash
+# Lookup IP location + check if blocked
+GET /api/geoip/lookup/8.8.8.8
+Headers: Authorization: Bearer <token>
+Response: { "ip": "8.8.8.8", "geo": { "country": "US", "city": "Mountain View" }, "blocked": false }
+
+# Get list of currently blocked countries
+GET /api/geoip/blocked-countries
+Headers: Authorization: Bearer <token>
+Response: { "blockedCountries": ["KP", "IR", "CU", "SY"] }
+
+# Block a country
+POST /api/geoip/block-country
+Headers: Authorization: Bearer <token>
+Body: { "countryCode": "RU" }
+Response: { "message": "Country added to blocklist", "country": "RU" }
+
+# Unblock a country
+POST /api/geoip/unblock-country
+Headers: Authorization: Bearer <token>
+Body: { "countryCode": "RU" }
+Response: { "message": "Country removed from blocklist", "country": "RU" }
+```
+
+### Tarpit Management
+
+```bash
+# Get tarpit status (which IPs are currently tarpitted)
+GET /api/tarpit/status
+Headers: Authorization: Bearer <token>
+Response: { "tarpitted": [{ "ip": "10.0.0.99", "riskScore": 75, "ttl": 180 }], "count": 1 }
+
+# Manually force an IP into tarpit for 5 minutes
+POST /api/tarpit/force/:ip?score=75
+Headers: Authorization: Bearer <token>
+Body: { "score": 75 }
+Response: { "message": "10.0.0.99 tarpitted for 5 minutes" }
+
+# Remove IP from tarpit
+DELETE /api/tarpit/clear/:ip
+Headers: Authorization: Bearer <token>
+Response: { "message": "10.0.0.99 removed from tarpit" }
+```
+
+### System Health & Logs
+
+```bash
+# Health check endpoint
+GET /api/health
+Response: { "status": "ok", "ts": "2024-01-01T12:00:00.000Z" }
+
+# Real-time Activity Logs (via WebSocket)
+# Note: GET /api/logs is not yet fully implemented
+# Use WebSocket connection to listen for real-time activity_log events instead
+# Event: activity_log → { ipAddress, eventType, severity, description, timestamp }
+```
+
+### Honeypot Endpoints (Security Traps)
+
+Các endpoint sau là honeypot — truy cập bất kỳ endpoint nào sẽ bị flag CRITICAL ngay lập tức:
+
+```
+GET/POST /.env
+GET/POST /admin/secret
+GET/POST /admin/backup
+GET/POST /wp-admin
+GET/POST /phpmyadmin
+GET/POST /admin/config.json
+```
+
+Khi attacker truy cập honeypot:
+1. Server trả về HTTP 404 giả (attacker không biết đây là bẫy)
+2. IP bị gán Risk Score 95/100 ngay lập tức
+3. SecurityEvent CRITICAL được tạo
+4. Email alert gửi tự động
+5. Dashboard hiển thị HONEYPOT TRIGGERED
+
+---
+
+## 🛡 Cơ chế phòng thủ
+
+### Defense in Depth
+
+```
+Request đến
+    │
+    ├─ 1. GeoIP Check       → Block nước nguy hiểm
+    ├─ 2. Rate Limiter       → Block IP request quá nhiều
+    ├─ 3. Tarpit             → Làm chậm suspicious IP
+    ├─ 4. JWT Verification   → Kiểm tra xác thực
+    ├─ 5. Honeypot           → Bẫy reconnaissance
+    ├─ 6. Input Validation   → Chặn SQLi, XSS
+    ├─ 7. CSP Headers        → Ngăn script execution
+    └─ 8. AI Risk Scorer     → Phân tích và cảnh báo
+```
+
+### Honeypot Strategy
+
+Khi attacker truy cập honeypot:
+1. Server trả về `404 Not Found` giả → attacker không biết đây là bẫy
+2. IP bị gán Risk Score 95/100 ngay lập tức
+3. SecurityEvent CRITICAL được tạo
+4. Email alert gửi tự động
+5. Dashboard hiển thị alert real-time
+
+### Tarpit Strategy
+
+```
+Risk Score 40-60  → Delay 3-12 giây
+Risk Score 60-80  → Delay 12-25 giây
+Risk Score 80+    → Delay 30 giây → Block 429
+Normal users      → Không bị ảnh hưởng
 ```
 
 ---
 
-## 📁 Cấu Trúc Dự Án
+## 🤖 AI Risk Scorer
 
-```
-cyber-defense-step1/
-├── README.md                          # Tệp này
-├── docker-compose.yml                 # Container orchestration
-├── docker/
-│   └── mongo-init.js                  # MongoDB initialization script
-│
-├── backend/                           # Node.js/Express API
-│   ├── Dockerfile
-│   ├── package.json
-│   ├── .env.example
-│   └── src/
-│       ├── index.js                   # Express app & Socket.io server
-│       ├── demo-risk-scorer.js        # Standalone risk calculator
-│       ├── config/
-│       │   ├── database.js            # MongoDB connection config
-│       │   └── redis.js               # Redis client config
-│       ├── models/                    # Mongoose schemas
-│       │   ├── User.js                # User authentication model
-│       │   ├── ActivityLog.js         # Activity audit log model
-│       │   └── SecurityEvent.js       # Security incident model
-│       ├── controllers/               # Route handlers
-│       │   ├── authController.js      # Auth operations
-│       │   └── simulateController.js  # Attack simulation
-│       ├── services/                  # Business logic
-│       │   ├── riskScorer.js          # Risk calculation engine
-│       │   ├── anomalyDetector.js     # Pattern detection
-│       │   └── logService.js          # Logging utilities
-│       ├── middleware/
-│       │   ├── auth.js                # JWT authentication
-│       │   └── honeypot.js            # Honeypot trap handler
-│       ├── routes/                    # API endpoints
-│       │   ├── auth.js                # /api/auth
-│       │   ├── events.js              # /api/events
-│       │   ├── logs.js                # /api/logs
-│       │   ├── risk.js                # /api/risk
-│       │   └── simulate.js            # /api/simulate
-│       └── scripts/                   # Utility scripts
-│           ├── seed.js                # Database seeding
-│           └── attacker/              # Attack simulation scripts
-│               ├── brute-force-attacker.js
-│               ├── sqli-attacker.js
-│               └── recon-attacker.js
-│
-└── frontend/                          # React application
-    ├── Dockerfile
-    ├── package.json
-    ├── public/
-    │   └── index.html
-    └── src/
-        ├── index.js                   # React entry point
-        ├── App.jsx                    # Root component
-        ├── index.css                  # Global styles
-        ├── components/
-        │   └── layout/
-        │       └── Layout.jsx         # Main layout wrapper
-        ├── hooks/
-        │   ├── useAuth.js             # Authentication context
-        │   └── useSocket.js           # WebSocket connection hook
-        ├── pages/                     # Page components
-        │   ├── OverviewPage.jsx       # Dashboard overview
-        │   ├── LiveLogsPage.jsx       # Activity log viewer
-        │   ├── RiskPage.jsx           # Risk assessment view
-        │   ├── SimulatePage.jsx       # Attack simulator UI
-        │   ├── ThreatsPage.jsx        # Threat intelligence
-        │   └── AttackVisualizerPage.jsx # Network visualization
-        ├── services/
-        │   └── api.js                 # API client
-        └── styles/
-            └── ThreatsPage.css        # Component styles
-```
-
----
-
-## 🔧 Thành Phần Chính
-
-### **1. Risk Scoring Engine (Động Cơ Tính Điểm Rủi Ro)** - `services/riskScorer.js`
-
-Đánh giá rủi ro đa yếu tố dựa trên các quy tắc có thể cấu hình:
+### Cách hoạt động
 
 ```javascript
-// Quy Tắc Tính Điểm Rủi Ro
-const RULES = [
-  { id: 'BRUTE_FORCE_MODERATE',    weight: 40,  triggers: ≥5 đăng nhập thất bại (10 phút) },
-  { id: 'BRUTE_FORCE_AGGRESSIVE',  weight: 20,  triggers: ≥10 đăng nhập thất bại },
-  { id: 'HONEYPOT_ACCESS',         weight: 35,  triggers: Honeypot endpoint được truy cập },
-  { id: 'RATE_LIMIT_ABUSE',        weight: 20,  triggers: ≥3 rate limit hits },
-  { id: 'SQLI_ATTEMPT',            weight: 50,  triggers: SQL injection payload phát hiện },
-  { id: 'MULTI_VECTOR_ATTACK',     weight: 20,  triggers: ≥2 loại tấn công từ cùng IP }
-];
-
-// Mức Rủi Ro
-0-30:   LOW       (thông tin)
-31-60:  MEDIUM    (cảnh báo)
-61-79:  HIGH      (yêu cầu điều tra)
-80-100: CRITICAL  (tự động chặn)
-```
-
-### **2. Anomaly Detection Service (Dịch Vụ Phát Hiện Bất Thường)** - `services/anomalyDetector.js`
-
-Giám sát liên tục với các ngưỡng có thể cấu hình:
-
-```javascript
-DETECTION_PATTERNS = {
-  BruteForce:     { window: 10 phút,  threshold: ≥5 LOGIN_FAILED events },
-  Scanning:       { window: 5 phút,   threshold: ≥8 endpoint khác nhau },
-  RateLimitAbuse: { window: 5 phút,   threshold: ≥3 rate limit hits },
-};
-
-// Thực Hiện
-- Chạy mỗi 2 phút (có thể cấu hình)
-- Tạo Security Event objects cho các bất thường phát hiện
-- Kích hoạt cảnh báo Socket.io thời gian thực
-- Tự động chặn IP với score ≥80
-```
-
-### **3. Authentication System (Hệ Thống Xác Thực)** - `controllers/authController.js`
-
-```javascript
-// User Model
+// Ví dụ output
 {
-  email:      string (unique, lowercase)
-  password:   bcrypt hashed (12 rounds)
-  role:       'admin' | 'viewer'
-  lastLogin:  Date
-  loginCount: number
-  isBlocked:  boolean
-}
-
-// JWT Token Structure
-{
-  userId: ObjectId,
-  role:   'admin' | 'viewer',
-  iat:    issued timestamp,
-  exp:    expiration (mặc định: 7 ngày)
-}
-```
-
-### **4. Honeypot Middleware (Middleware Bẫy)** - `middleware/honeypot.js`
-
-Phát hiện xâm nhập dựa trên lừa dối:
-
-```javascript
-// Honeypot Endpoints (trap URLs)
-/admin/secret
-/admin/backup
-/.env
-/wp-admin
-/phpmyadmin
-/admin/config.json
-
-// Sự Kiện Được Kích Hoạt
-eventType: 'HONEYPOT_TRIGGERED'
-severity: 'high'
-riskScore: +35 points
-metadata: { endpoint, userAgent, headers }
-```
-
----
-
-## 📡 Tài Liệu API
-
-### Base URL
-```
-http://localhost:5000/api
-```
-
-### **Các Endpoint Xác Thực**
-
-#### Đăng Ký Người Dùng
-```http
-POST /auth/register
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "SecurePass123",
-  "role": "viewer"  // hoặc "admin"
-}
-
-Response (201):
-{
-  "message": "Người dùng được tạo",
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "user": {
-    "id": "507f1f77bcf86cd799439011",
-    "email": "user@example.com",
-    "role": "viewer",
-    "createdAt": "2024-05-15T10:30:00Z"
+  "ip": "10.0.0.99",
+  "score": 100,
+  "level": "critical",
+  "reasons": [
+    "Multiple failed logins (≥5 in 10 min)",      // +40
+    "Aggressive brute force (≥10 failed logins)",  // +20
+    "Accessed honeypot endpoint",                  // +35
+    "SQL injection payload detected"               // +50
+    // Total: 145 → capped at 100
+  ],
+  "signals": {
+    "failedLogins": 15,
+    "rateLimitHits": 3,
+    "uniqueEndpoints": 8,
+    "recentLogCount": 42
   }
 }
 ```
 
-#### Đăng Nhập
-```http
-POST /auth/login
-Content-Type: application/json
+### Tại sao Rule-based thay vì ML?
 
-{
-  "email": "user@example.com",
-  "password": "SecurePass123"
-}
+| Tiêu chí | Rule-based | Machine Learning |
+|----------|-----------|-----------------|
+| Explainability | ✅ Giải thích được từng lý do | ❌ Black box |
+| Training data | ✅ Không cần | ❌ Cần nhiều data |
+| Production ready | ✅ Ngay lập tức | ❌ Cần huấn luyện |
+| Audit trail | ✅ Dễ kiểm tra | ❌ Khó audit |
+| False positives | ✅ Kiểm soát được | ❌ Khó kiểm soát |
 
-Response (200):
-{
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "user": { /* user object */ }
-}
+---
+
+## 📁 Cấu trúc thư mục
+
+```
+cyber-defense-step1/
+├── docker-compose.yml
+├── package.json
+├── README.md
+├── docker/
+│   └── mongo-init.js              ← Init MongoDB collections + indexes
+├── backend/
+│   ├── Dockerfile
+│   ├── package.json
+│   └── src/
+│       ├── index.js               ← Entry point + Socket.io + schedulers
+│       ├── demo-risk-scorer.js    ← Risk scoring demo utility
+│       ├── config/
+│       │   ├── database.js        ← MongoDB connection
+│       │   └── redis.js           ← Redis connection
+│       ├── models/
+│       │   ├── User.js            ← User schema + bcrypt hooks
+│       │   ├── ActivityLog.js     ← All events log
+│       │   └── SecurityEvent.js   ← Confirmed threats
+│       ├── controllers/
+│       │   ├── authController.js  ← Login, register, logout
+│       │   ├── twoFactorController.js ← 2FA TOTP
+│       │   ├── xssController.js   ← XSS demo endpoints
+│       │   └── simulateController.js ← Attack simulations
+│       ├── middleware/
+│       │   ├── auth.js            ← JWT verification
+│       │   ├── honeypot.js        ← Trap endpoints
+│       │   ├── geoip.js           ← Country blocking
+│       │   └── tarpit.js          ← Response delay
+│       ├── services/
+│       │   ├── riskScorer.js      ← AI risk scoring engine
+│       │   ├── anomalyDetector.js ← Pattern detection
+│       │   ├── logService.js      ← Central logging + WebSocket
+│       │   ├── emailService.js    ← Email alerts
+│       │   └── reportService.js   ← PDF generation
+│       ├── routes/
+│       │   ├── auth.js
+│       │   ├── risk.js
+│       │   ├── logs.js
+│       │   ├── events.js
+│       │   ├── simulate.js
+│       │   ├── xss.js
+│       │   ├── geoip.js
+│       │   ├── tarpit.js
+│       │   ├── twoFactor.js
+│       │   ├── reports.js
+│       │   └── admin.js
+│       └── scripts/
+│           ├── seed.js            ← Demo data seeder
+│           └── attacker/
+│               ├── brute-force-attacker.js
+│               ├── sqli-attacker.js
+│               ├── recon-attacker.js
+│               ├── xss-attacker.js
+│               └── tarpit-test.js
+└── frontend/
+    ├── Dockerfile
+    ├── package.json
+    ├── README.md
+    ├── build/                     ← Production build output
+    │   ├── asset-manifest.json
+    │   ├── index.html
+    │   └── static/
+    │       ├── css/
+    │       │   └── main.0d98f757.css
+    │       └── js/
+    │           ├── main.b307540d.js
+    │           └── main.b307540d.js.LICENSE.txt
+    ├── public/
+    │   └── index.html
+    └── src/
+        ├── App.jsx                ← Root + WebSocket state
+        ├── index.css              ← Dark cyberpunk design system
+        ├── index.js               ← Entry point
+        ├── hooks/
+        │   ├── useAuth.js         ← Auth context
+        │   └── useSocket.js       ← WebSocket hook
+        ├── services/
+        │   └── api.js             ← Axios + Socket.io instances
+        ├── components/
+        │   └── layout/
+        │       └── Layout.jsx     ← Sidebar + Topbar
+        ├── styles/
+        │   └── ThreatsPage.css    ← Page-specific styles
+        └── pages/
+            ├── LoginPage.jsx
+            ├── OverviewPage.jsx   ← Dashboard + charts
+            ├── LiveLogsPage.jsx   ← Real-time log feed
+            ├── ThreatsPage.jsx    ← Security events management
+            ├── RiskPage.jsx       ← IP risk analyzer
+            ├── SimulatePage.jsx   ← Attack simulation panel
+            ├── AttackVisualizerPage.jsx ← Canvas animation
+            ├── XSSPage.jsx        ← XSS playground
+            ├── TwoFactorPage.jsx  ← 2FA setup UI
+            ├── NotificationsPage.jsx ← Email alerts UI
+            └── ReportsPage.jsx    ← PDF report generator
 ```
 
 ---
 
-### **Các Endpoint Nhật Ký**
-
-#### Lấy Activity Logs
-```http
-GET /logs?limit=50&offset=0&severity=high
-Authorization: Bearer <JWT_TOKEN>
-
-Response (200):
-{
-  "logs": [
-    {
-      "id": "507f1f77bcf86cd799439011",
-      "eventType": "LOGIN_FAILED",
-      "ipAddress": "192.168.1.100",
-      "severity": "medium",
-      "timestamp": "2024-05-15T10:30:00Z",
-      "metadata": { "reason": "Mật khẩu không hợp lệ" }
-    }
-  ],
-  "total": 1523,
-  "limit": 50,
-  "offset": 0
-}
-```
-
----
-
-### **Các Endpoint Sự Kiện Bảo Mật**
-
-#### Lấy Security Events
-```http
-GET /events?type=BRUTE_FORCE&resolved=false
-Authorization: Bearer <JWT_TOKEN>
-
-Response (200):
-{
-  "events": [
-    {
-      "id": "507f1f77bcf86cd799439011",
-      "type": "BRUTE_FORCE",
-      "ipAddress": "10.0.0.99",
-      "description": "Brute force phát hiện: 12 failed login attempts trong 10 phút",
-      "severity": "critical",
-      "riskScore": 85,
-      "evidence": {
-        "failedAttempts": 12,
-        "windowMinutes": 10,
-        "reasons": ["BRUTE_FORCE_AGGRESSIVE"]
-      },
-      "resolved": false,
-      "createdAt": "2024-05-15T10:30:00Z"
-    }
-  ]
-}
-```
-
-#### Giải Quyết Security Event (Chỉ Admin)
-```http
-POST /events/{eventId}/resolve
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: application/json
-
-{
-  "notes": "Người dùng hợp pháp được xác nhận"
-}
-
-Response (200):
-{
-  "message": "Sự kiện đã được giải quyết",
-  "event": { /* updated event */ }
-}
-```
-
----
-
-### **Các Endpoint Đánh Giá Rủi Ro**
-
-#### Tính Toán Risk Score
-```http
-POST /risk/calculate
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: application/json
-
-{
-  "ipAddress": "10.0.0.99"
-}
-
-Response (200):
-{
-  "ipAddress": "10.0.0.99",
-  "score": 75,
-  "level": "HIGH",
-  "reasons": [
-    "BRUTE_FORCE_AGGRESSIVE",
-    "HONEYPOT_ACCESS"
-  ],
-  "signals": [
-    { rule: "BRUTE_FORCE_AGGRESSIVE", weight: 20, matched: true },
-    { rule: "HONEYPOT_ACCESS", weight: 35, matched: true }
-  ]
-}
-```
-
----
-
-### **Các Endpoint Mô Phỏng Tấn Công**
-
-#### Mô Phỏng Brute Force
-```http
-POST /simulate/brute-force
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: application/json
-
-{
-  "iterations": 15
-}
-
-Response (200):
-{
-  "message": "Brute force attack mô phỏng với 15 attempts",
-  "attempts": 15,
-  "finalRiskScore": 68,
-  "level": "HIGH",
-  "blocked": false,
-  "results": [
-    { "attempt": 1, "payload": "fakepass1", "status": 401 },
-    { "attempt": 2, "payload": "fakepass2", "status": 401 }
-  ]
-}
-```
-
-#### Mô Phỏng SQL Injection
-```http
-POST /simulate/sqli
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: application/json
-
-{
-  "customPayloads": ["' OR 1=1 --", "admin'--"]  // tùy chọn
-}
-
-Response (200):
-{
-  "message": "SQL injection attack mô phỏng",
-  "payloads_tested": 5,
-  "successful_bypasses": 0,
-  "finalRiskScore": 72,
-  "level": "HIGH"
-}
-```
-
-#### Mô Phỏng Reconnaissance (Honeypot)
-```http
-POST /simulate/recon
-Authorization: Bearer <JWT_TOKEN>
-
-Response (200):
-{
-  "message": "Reconnaissance attack mô phỏng",
-  "honeypot_endpoints_accessed": 6,
-  "finalRiskScore": 78,
-  "level": "HIGH"
-}
-```
-
----
-
-## 🔒 Tính Năng Bảo Mật
-
-### **Xác Thực & Phân Quyền**
-- ✅ JWT token-based authentication (hết hạn 7 ngày)
-- ✅ Role-based access control (RBAC): Admin vs Viewer
-- ✅ Password hashing với bcryptjs (12-round salting)
-- ✅ Token validation trên mỗi protected endpoint
-
-### **Bảo Mật Mạng**
-- ✅ CORS protection (whitelist: localhost:3000, localhost:3001)
-- ✅ Helmet.js cho HTTP security headers
-- ✅ Rate limiting (100 requests/phút mỗi IP)
-- ✅ Theo dõi địa chỉ IP và logging
-
-### **Bảo Vệ Dữ Liệu**
-- ✅ MongoDB connection với xác thực
-- ✅ Redis được bảo mật bằng xác thực mật khẩu
-- ✅ Password không bao giờ được trả về trong API responses
-- ✅ Metadata nhạy cảm được mã hóa trong logs
-
-### **Phát Hiện Mối Đe Dọa**
-- ✅ Phát hiện Brute Force với auto-blocking
-- ✅ Lọc payload SQL injection
-- ✅ Phát hiện Reconnaissance dựa trên Honeypot
-- ✅ Phát hiện Rate Limit abuse
-- ✅ Tương quan tấn công đa vector
-
-### **Kiểm Toán & Tuân Thủ**
-- ✅ Comprehensive activity logging (tất cả các sự kiện)
-- ✅ Security event tracking với evidence
-- ✅ Incident resolution workflows
-- ✅ Audit trail cho báo cáo tuân thủ
-
----
-
-## 💾 Schema Cơ Sở Dữ Liệu
-
-### **Users Collection**
-```javascript
-{
-  _id:        ObjectId,
-  email:      String (unique, indexed),
-  password:   String (bcrypt hashed),
-  role:       Enum ['admin', 'viewer'],
-  lastLogin:  Date,
-  loginCount: Number,
-  isBlocked:  Boolean,
-  createdAt:  Date (indexed),
-  updatedAt:  Date
-}
-```
-
-### **ActivityLogs Collection**
-```javascript
-{
-  _id:          ObjectId,
-  eventType:    Enum [LOGIN_SUCCESS, LOGIN_FAILED, HONEYPOT_TRIGGERED, ...],
-  userId:       ObjectId (ref: User),
-  ipAddress:    String (indexed),
-  userAgent:    String,
-  endpoint:     String,
-  method:       String (GET, POST, etc.),
-  metadata:     Mixed (flexible payload),
-  riskScore:    Number (0-100),
-  riskReasons:  [String],
-  severity:     Enum [info, low, medium, high, critical],
-  createdAt:    Date (indexed),
-  updatedAt:    Date
-}
-```
-
-### **SecurityEvents Collection**
-```javascript
-{
-  _id:        ObjectId,
-  type:       Enum [BRUTE_FORCE, SQL_INJECTION, HONEYPOT_ACCESS, ...],
-  ipAddress:  String (indexed),
-  description: String,
-  severity:   Enum [low, medium, high, critical],
-  riskScore:  Number (0-100),
-  evidence:   Mixed (attack details),
-  resolved:   Boolean,
-  resolvedAt: Date,
-  resolvedBy: ObjectId (ref: User),
-  createdAt:  Date (indexed),
-  updatedAt:  Date
-}
-```
-
-### **Redis Key Patterns**
-```javascript
-failed_login:{ipAddress}        // Counter (TTL: 10 phút)
-blocked_ip:{ipAddress}          // Flag (TTL: 5 phút)
-rate_limit:{ipAddress}          // Counter (TTL: 1 phút)
-session:{sessionId}             // Session data (TTL: 7 ngày)
-```
-
----
-
-## ⚙️ Cấu Hình
-
-### **Biến Môi Trường** (`.env`)
+## 🔧 Lệnh hữu ích
 
 ```bash
-# Ứng Dụng
-NODE_ENV=development
-PORT=5000
-
-# Cơ Sở Dữ Liệu
-MONGODB_URI=mongodb://admin:secret123@mongodb:27017/cyberdefense?authSource=admin
-REDIS_URL=redis://:redis123@redis:6379
-
-# Xác Thực
-JWT_SECRET=super_secret_jwt_key_change_in_prod
-JWT_EXPIRES_IN=7d
-
-# Rate Limiting
-RATE_LIMIT_WINDOW_MS=60000        # 1 phút
-RATE_LIMIT_MAX=100                # requests mỗi window
-
-# Bảo Mật
-BCRYPT_ROUNDS=12
-CORS_ORIGIN=http://localhost:3000,http://localhost:3001
-
-# Anomaly Detection
-ANOMALY_CHECK_INTERVAL=120000     # 2 phút
-AUTO_BLOCK_SCORE=80
-BLOCK_DURATION=300000             # 5 phút
-```
-
----
-
-## 🛠️ Phát Triển
-
-### **Phát Triển Backend**
-
-```bash
-cd backend
-npm install
-
-# Development server với hot reload
-npm run dev
-
-# Database seeding với dữ liệu test
-npm run seed
-
-# Chạy attack simulations
-npm run attack:brute
-npm run attack:sqli
-npm run attack:recon
-```
-
-### **Phát Triển Frontend**
-
-```bash
-cd frontend
-npm install
-
-# Development server
-npm start
-
-# Build cho production
-npm run build
-```
-
-### **Phát Triển Docker**
-
-```bash
-# Rebuild containers sau thay đổi mã
-docker compose up --build
-
-# Xem logs
+# Xem logs của từng service
 docker compose logs -f backend
-docker compose logs -f frontend
+docker compose logs -f mongodb
 
-# Truy cập container shell
-docker exec -it cyberdef_backend sh
-docker exec -it cyberdef_mongo mongosh -u admin -p secret123
+# Restart service
+docker compose restart backend
 
-# Giám sát hiệu suất
-docker stats
+# Vào MongoDB shell
+docker compose exec mongodb mongosh -u admin -p secret123
+
+# Xem collections
+db.getSiblingDB('cyberdefense').activity_logs.find().limit(5).pretty()
+
+# Xóa toàn bộ data và reset
+docker compose down -v
+docker compose up -d
+cd backend && npm run seed
+
+# Backup MongoDB
+docker compose exec mongodb mongodump -u admin -p secret123 --out /tmp/backup
+docker cp cyberdef_mongo:/tmp/backup ./backup
+
+# Generate JWT secret mạnh
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ```
 
 ---
 
-## 📊 Chỉ Số Hiệu Suất
+## 🔒 Bảo mật Production
 
-| Chỉ Số | Mục Tiêu | Ghi Chú |
-|--------|----------|--------|
-| API Response Time | <200ms | Tại 50 concurrent users |
-| Risk Score Calculation | <100ms | Mỗi IP address |
-| Anomaly Detection | <5s | Cho 10k+ logs mỗi lần chạy |
-| WebSocket Latency | <50ms | Dashboard cập nhật real-time |
-| Database Query | <100ms | MongoDB indexes được tối ưu |
+Trước khi deploy production, đảm bảo:
 
----
+```bash
+# 1. Đổi tất cả passwords mặc định trong .env
+JWT_SECRET=<64 random chars>
+MONGO_PASSWORD=<strong password>
+REDIS_PASSWORD=<strong password>
 
-## 🤝 Đóng Góp
+# 2. Giới hạn CORS
+FRONTEND_URL=https://your-domain.com
 
-Chúng tôi hoan nghênh các đóng góp cải thiện Cyber Defense System. Vui lòng tuân theo các hướng dẫn này:
-
-### **Quy Trình Phát Triển**
-
-1. Fork repository
-2. Tạo feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Mở Pull Request
-
-### **Tiêu Chuẩn Code**
-
-- Sử dụng async/await cho các hoạt động bất đồng bộ
-- Tuân theo cấu hình ESLint cho style code
-- Viết commit messages có ý nghĩa
-- Thêm comments cho logic phức tạp
-- Test tất cả API endpoints trước submit
-
-### **Báo Cáo Lỗi**
-
-Vui lòng bao gồm:
-- Mô tả lỗi
-- Các bước để reproduce
-- Hành vi mong đợi vs thực tế
-- Chi tiết môi trường (OS, Node version, etc.)
-- Screenshots/logs nếu có
+# 3. Bật HTTPS (nginx + Let's Encrypt)
+# 4. Set NODE_ENV=production
+# 5. Remove /api/xss/vulnerable endpoint
+# 6. Disable MongoDB port exposure (27017)
+```
 
 ---
 
-## 📝 Giấy Phép
+## 📄 License
 
-Dự án này được cấp phép dưới MIT License. Xem [LICENSE](LICENSE) để chi tiết.
-
----
-
-## 📞 Hỗ Trợ
-
-Cho các vấn đề, câu hỏi hoặc đề xuất:
-
-- **Issues**: [GitHub Issues](https://github.com/htrsng/Cyber-Defense-System/issues)
-- **Email**: support@cyberdefense.local
-- **Documentation**: Xem thư mục `/docs`
+MIT License — xem [LICENSE](LICENSE)
 
 ---
 
-## 🙏 Lời Cảm Ơn
+## 👨‍💻 Tác giả
 
-- MongoDB & Redis communities cho các cơ sở dữ liệu tuyệt vời
-- Express.js và Socket.io teams cho các frameworks mạnh mẽ
-- React community cho thư viện UI mạnh mẽ
-- Security researchers cho threat intelligence
+Được xây dựng cho môn **Bảo mật Ứng dụng và Hệ thống**
+
+> *"Hệ thống phát hiện, phân tích, cảnh báo và báo cáo toàn bộ tự động — không cần can thiệp thủ công."*
 
 ---
 
-**Cập Nhật Cuối Cùng**: 15 Tháng 5, 2024  
-**Phiên Bản**: 1.0.0  
-**Trạng Thái**: Sản Xuất - Sẵn Sàng ✅
+<div align="center">
+
+**◈ CYBERDEF** — AI-Powered Cyber Defense System
+
+*Made with ❤️ and lots of ☕*
+
+</div>
