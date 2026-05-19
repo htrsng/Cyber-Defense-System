@@ -9,6 +9,8 @@ import RiskPage from './pages/RiskPage';
 import SimulatePage from './pages/SimulatePage';
 import XSSPage from './pages/XSSPage';
 import TwoFactorPage from './pages/TwoFactorPage';
+import NotificationsPage from './pages/NotificationsPage';
+import ReportsPage from './pages/ReportsPage';
 import { ThreatsPage } from './pages/ThreatsPage';
 import AttackVisualizerPage from './pages/AttackVisualizerPage';
 import './index.css';
@@ -73,6 +75,8 @@ function AppInner() {
             case 'simulate': return <SimulatePage logs={logs} />;
             case 'xss': return <XSSPage liveAlerts={liveAlerts} />;
             case 'twofactor': return <TwoFactorPage />;
+            case 'notifications': return <NotificationsPage />;
+            case 'reports': return <ReportsPage />;
             case 'threats': return <ThreatsPage liveAlerts={liveAlerts} />;
             case 'visualizer': return <AttackVisualizerPage />;
             default: return null;

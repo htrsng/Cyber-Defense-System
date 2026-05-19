@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 
 const EVENT_ICONS = {
@@ -48,6 +48,11 @@ export default function LiveLogsPage({ logs }) {
             l.endpoint?.includes(search);
         return matchSev && matchSearch;
     });
+
+    useEffect(() => {
+        const feed = document.querySelector('.log-feed');
+        if (feed) feed.scrollTop = 0;
+    }, [logs.length]);
 
     return (
         <div>
@@ -102,7 +107,9 @@ export default function LiveLogsPage({ logs }) {
             <div className="log-feed">
                 {visible.length === 0 ? (
                     <div className="empty-state">
-                        {logs.length === 0 ? 'Đang chờ sự kiện...' : 'Không có event nào khớp bộ lọc'}
+                        {logs.length === 0
+                            ? 'Đang chờ sự kiện mới từ backend. Khi có traffic hoặc attack simulation, log sẽ xuất hiện ở đây.'
+                            : 'Không có event nào khớp bộ lọc hiện tại. Hãy đổi filter hoặc xoá từ khóa tìm kiếm.'}
                     </div>
                 ) : (
                     visible.map((entry, i) => (

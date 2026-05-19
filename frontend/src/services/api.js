@@ -66,3 +66,9 @@ export const simulateAPI = {
     sqli: (config) => api.post('/api/simulate/sqli', config),
     honeypot: () => api.post('/api/simulate/honeypot'),
 };
+
+export const adminAPI = {
+    getEmailConfig: () => api.get('/api/admin/email-config'),
+    testEmail: () => api.post('/api/admin/test-email'),
+    sendDailyReport: () => api.post('/api/admin/daily-report'),
+};

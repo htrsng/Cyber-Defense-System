@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 
 const NAV = [
@@ -9,12 +9,20 @@ const NAV = [
     { icon: '⚡', label: 'Simulate', path: 'simulate' },
     { icon: '⚡', label: 'XSS Demo', path: 'xss' },
     { icon: '🔐', label: '2FA', path: 'twofactor' },
+    { icon: '◉', label: 'Alerts', path: 'notifications' },
+    { icon: '◈', label: 'Reports', path: 'reports' },
     { icon: '⚔', label: 'Visualizer', path: 'visualizer' },
 ];
 
 export default function Layout({ currentPage, onNavigate, children, liveAlerts = 0, tarpitCount = 0 }) {
     const { user, logout } = useAuth();
     const [socketOnline] = useState(true); // replaced by real socket status in parent
+    const [time, setTime] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     return (
         <div className="app-shell">
@@ -47,6 +55,9 @@ export default function Layout({ currentPage, onNavigate, children, liveAlerts =
                     <div className="connecting">
                         <div className={`dot ${socketOnline ? 'online' : 'offline'}`} />
                         <span>{socketOnline ? 'TRỰC TUYẾN' : 'NGOẠI TUYẾN'}</span>
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)' }}>
+                        {time.toLocaleTimeString('vi-VN')}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)' }}>
