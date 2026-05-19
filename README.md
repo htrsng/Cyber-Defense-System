@@ -263,7 +263,7 @@ Controller Logic
 
 ```bash
 git clone https://github.com/htrsng/Cyber-Defense-System.git
-cd cyber-defense-step1
+cd cyber-defense
 ```
 
 ### 2. Cấu hình môi trường
@@ -703,7 +703,7 @@ Normal users      → Không bị ảnh hưởng
 ## 📁 Cấu trúc thư mục
 
 ```
-cyber-defense-step1/
+cyber-defense/
 ├── docker-compose.yml
 ├── package.json
 ├── README.md
