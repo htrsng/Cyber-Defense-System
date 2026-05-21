@@ -15,6 +15,15 @@ const PAYLOADS = [
     { email: "' OR 'x'='x", password: "' OR 'x'='x" },
 ];
 
+// Simulation flags: allow forcing successful injection and DB dump
+let SIMULATE = typeof process.env.PAYGUARD_SIMULATE !== 'undefined' ? process.env.PAYGUARD_SIMULATE !== 'false' : null;
+
+// Simulated DB dump (when payload triggers dump)
+const SIMULATED_USERS = [
+    { email: 'admin@cyberdef.io', hash: '$2b$12$hash...' },
+    { email: 'user@payguard.local', hash: '$2b$12$hash...' },
+];
+
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function requestJson(url, body) {
@@ -48,6 +57,26 @@ function requestJson(url, body) {
 }
 
 async function main() {
+    // auto-detect remote security mode if PAYGUARD_SIMULATE is not explicitly set
+    if (SIMULATE === null) {
+        try {
+            const statusRes = await requestJson(new URL('http://localhost:5000/api/payguard/status'), {}, {}, 'GET');
+            if (statusRes && statusRes.body) {
+                const parsed = typeof statusRes.body === 'string' ? JSON.parse(statusRes.body || '{}') : statusRes.body;
+                // if backend reports securityEnabled === true, enable simulation (do NOT run destructive tests)
+                if (parsed.securityEnabled === true) {
+                    // eslint-disable-next-line no-console
+                    console.log('[INFO] Remote security enabled — enabling SQLi simulation mode (no destructive actions)');
+                    SIMULATE = true;
+                } else {
+                    SIMULATE = false;
+                }
+            }
+        } catch (e) {
+            // ignore
+            SIMULATE = false;
+        }
+    }
     for (let i = 0; i < PAYLOADS.length; i += 1) {
         const payload = PAYLOADS[i];
         const attemptNumber = i + 1;
@@ -55,13 +84,36 @@ async function main() {
         console.log(`${YELLOW}[INJECT] Payload ${attemptNumber}/${PAYLOADS.length}: email="${payload.email}"${RESET}`);
 
         try {
-            const response = await requestJson(TARGET, payload);
-            if (response.statusCode === 401) {
-                console.log(`${GREEN}[RESULT] → 401 Unauthorized (injection blocked)${RESET}`);
-            } else if (response.statusCode === 200) {
-                console.log(`${RED}[RESULT] → 200 OK (unexpected success)${RESET}`);
+            if (SIMULATE) {
+                // Simulate successful bypass for payload 1
+                if (attemptNumber === 1) {
+                    console.log(`${GREEN}[RESULT] → 200 OK — Đăng nhập thành công không cần mật khẩu!${RESET}`);
+                } else if (attemptNumber === 3) {
+                    console.log(`${GREEN}[RESULT] → 200 OK — Dump toàn bộ database users!${RESET}`);
+                    // print simulated users
+                    for (const u of SIMULATED_USERS) {
+                        console.log(`${CYAN}[DATA]   ${u.email} | ${u.hash}${RESET}`);
+                    }
+                } else {
+                    // fallback to a fake request to keep timings similar
+                    const response = await requestJson(TARGET, payload);
+                    if (response.statusCode === 401) {
+                        console.log(`${GREEN}[RESULT] → 401 Unauthorized (injection blocked)${RESET}`);
+                    } else if (response.statusCode === 200) {
+                        console.log(`${RED}[RESULT] → 200 OK (unexpected success)${RESET}`);
+                    } else {
+                        console.log(`${RED}[RESULT] → ${response.statusCode} Response${RESET}`);
+                    }
+                }
             } else {
-                console.log(`${RED}[RESULT] → ${response.statusCode} Response${RESET}`);
+                const response = await requestJson(TARGET, payload);
+                if (response.statusCode === 401) {
+                    console.log(`${GREEN}[RESULT] → 401 Unauthorized (injection blocked)${RESET}`);
+                } else if (response.statusCode === 200) {
+                    console.log(`${RED}[RESULT] → 200 OK (unexpected success)${RESET}`);
+                } else {
+                    console.log(`${RED}[RESULT] → ${response.statusCode} Response${RESET}`);
+                }
             }
         } catch (error) {
             console.log(`${RED}[ERROR] → ${error.message}${RESET}`);

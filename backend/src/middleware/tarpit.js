@@ -5,6 +5,22 @@ const TARPIT_THRESHOLD = 40; // risk score >= 40 → tarpit
 const BLOCK_THRESHOLD = 80; // risk score >= 80 → block hoàn toàn
 const MIN_DELAY_MS = 3000; // 3 giây minimum
 const MAX_DELAY_MS = 30000; // 30 giây maximum
+const BYPASS_LOCAL = (process.env.TARPIT_BYPASS_LOCAL || (process.env.NODE_ENV !== 'production' ? 'true' : 'false')) === 'true';
+
+function isPrivateDevIp(ip) {
+    if (!ip) return false;
+    if (ip === '127.0.0.1' || ip === '::1' || ip === 'localhost') return true;
+    if (ip.startsWith('10.')) return true;
+    if (ip.startsWith('192.168.')) return true;
+
+    // 172.16.0.0 - 172.31.255.255
+    if (ip.startsWith('172.')) {
+        const secondOctet = Number(ip.split('.')[1]);
+        return Number.isInteger(secondOctet) && secondOctet >= 16 && secondOctet <= 31;
+    }
+
+    return false;
+}
 
 function calculateDelay(riskScore) {
     if (riskScore >= BLOCK_THRESHOLD) return MAX_DELAY_MS;
@@ -14,6 +30,9 @@ function calculateDelay(riskScore) {
 
 module.exports = async (req, res, next) => {
     const ip = req.ip?.replace('::ffff:', '') || '';
+    if (BYPASS_LOCAL && isPrivateDevIp(ip)) {
+        return next();
+    }
 
     // Only tarpit login + sensitive endpoints
     const TARPIT_PATHS = [

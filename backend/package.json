@@ -9,7 +9,8 @@
     "attack:sqli": "node src/scripts/attacker/sqli-attacker.js",
     "attack:xss": "node src/scripts/attacker/xss-attacker.js",
     "attack:recon": "node src/scripts/attacker/recon-attacker.js",
-    "attack:tarpit": "node src/scripts/attacker/tarpit-test.js"
+    "attack:tarpit": "node src/scripts/attacker/tarpit-test.js",
+    "attack:transfer": "node src/scripts/attacker/transfer-bot.js"
   },
   "dependencies": {
     "axios": "^1.16.1",

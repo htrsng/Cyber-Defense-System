@@ -11,6 +11,7 @@ const activityLogSchema = new mongoose.Schema({
       'TWO_FACTOR_ENABLED', 'TWO_FACTOR_DISABLED', 'TWO_FACTOR_FAILED',
       'ATTACK_SIM_BRUTE_FORCE', 'ATTACK_SIM_SQLI', 'ATTACK_SIM_XSS', 'ATTACK_SIM_HONEYPOT',
       'SUSPICIOUS_ACTIVITY', 'ANOMALY_DETECTED',
+      'TRANSFER_UNPROTECTED',
     ],
     required: true,
   },

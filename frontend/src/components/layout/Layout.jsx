@@ -1,27 +1,36 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 
-const NAV = [
-    { icon: '⬡', label: 'Tổng quan', path: 'overview' },
+const MAIN_NAV = [
+    { icon: '⬡', label: 'Tổng Quan', path: 'overview' },
     { icon: '◈', label: 'Live Logs', path: 'logs' },
     { icon: '◎', label: 'Threats', path: 'threats' },
     { icon: '◇', label: 'Risk Score', path: 'risk' },
-    { icon: '⚡', label: 'Simulate', path: 'simulate' },
-    { icon: '⚡', label: 'XSS Demo', path: 'xss' },
     { icon: '🔐', label: '2FA', path: 'twofactor' },
     { icon: '◉', label: 'Alerts', path: 'notifications' },
     { icon: '◈', label: 'Reports', path: 'reports' },
-    { icon: '⚔', label: 'Visualizer', path: 'visualizer' },
+];
+
+const DEMO_NAV = [
+    { icon: '⚡', label: 'Simulate', path: 'simulate' },
+    { icon: '⚡', label: 'XSS Demo', path: 'xss' },
+    { icon: '◉', label: 'Visualizer', path: 'visualizer' },
 ];
 
 export default function Layout({ currentPage, onNavigate, children, liveAlerts = 0, tarpitCount = 0 }) {
     const { user, logout } = useAuth();
     const [socketOnline] = useState(true); // replaced by real socket status in parent
     const [time, setTime] = useState(new Date());
+    const [labOpen, setLabOpen] = useState(false);
+    const isInLab = ['simulate', 'xss', 'visualizer'].includes(currentPage);
 
     useEffect(() => {
         const timer = setInterval(() => setTime(new Date()), 1000);
         return () => clearInterval(timer);
+    }, []);
+
+    useEffect(() => {
+        if (isInLab) setLabOpen(true);
     }, []);
 
     return (
@@ -48,8 +57,12 @@ export default function Layout({ currentPage, onNavigate, children, liveAlerts =
                         </span>
                     )}
                     {tarpitCount > 0 && (
-                        <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.12)', color: 'var(--amber)', borderColor: 'rgba(245, 158, 11, 0.28)' }}>
-                            🕸 {tarpitCount} TARPIT ACTIVE
+                        <span style={{
+                            fontFamily: 'var(--font-mono)', fontSize: 11,
+                            color: 'var(--amber)', display: 'flex',
+                            alignItems: 'center', gap: 4,
+                        }}>
+                            🕸 {tarpitCount} TARPITTED
                         </span>
                     )}
                     <div className="connecting">
@@ -88,7 +101,7 @@ export default function Layout({ currentPage, onNavigate, children, liveAlerts =
                     </div>
                 </div>
 
-                {NAV.map(item => (
+                {MAIN_NAV.map(item => (
                     <div
                         key={item.path}
                         className={`nav-item ${currentPage === item.path ? 'active' : ''}`}
@@ -99,11 +112,70 @@ export default function Layout({ currentPage, onNavigate, children, liveAlerts =
                     </div>
                 ))}
 
+                <div
+                    onClick={() => setLabOpen(!labOpen)}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '10px 20px', cursor: 'pointer',
+                        borderTop: '1px solid var(--border)',
+                        borderBottom: labOpen ? '1px solid var(--border)' : 'none',
+                        marginTop: 8,
+                        userSelect: 'none',
+                        transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                    <span style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 10,
+                        letterSpacing: '0.12em',
+                        color: 'var(--text-dim)',
+                        flex: 1,
+                    }}>
+                        ⚗ DEMO LAB
+                    </span>
+                    {!labOpen && isInLab && (
+                        <span style={{
+                            background: 'var(--cyan-dim)',
+                            color: 'var(--cyan)',
+                            fontSize: 9,
+                            padding: '1px 6px',
+                            borderRadius: 3,
+                            border: '1px solid var(--cyan)33',
+                        }}>
+                            ACTIVE
+                        </span>
+                    )}
+                    <span style={{
+                        fontSize: 10,
+                        color: 'var(--text-dim)',
+                        transform: labOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s',
+                        display: 'inline-block',
+                    }}>
+                        ▶
+                    </span>
+                </div>
+
+                {labOpen && DEMO_NAV.map(item => (
+                    <div
+                        key={item.path}
+                        className={`nav-item ${currentPage === item.path ? 'active' : ''}`}
+                        onClick={() => onNavigate(item.path)}
+                        style={{ paddingLeft: 28 }}
+                    >
+                        <span className="nav-icon">{item.icon}</span>
+                        {item.label}
+                    </div>
+                ))}
+
                 <div style={{ marginTop: 'auto', padding: '16px 20px', borderTop: '1px solid var(--border)' }}>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', lineHeight: 1.8 }}>
                         <div>NODE.JS + EXPRESS</div>
                         <div>MONGODB + REDIS</div>
-                        <div style={{ color: 'var(--cyan)' }}>● HỆ THỐNG ĐANG HOẠT ĐỘNG</div>
+                        <div>AI RISK ENGINE v1.0</div>
+                        <div style={{ color: 'var(--cyan)' }}>● SYSTEM OPERATIONAL</div>
                     </div>
                 </div>
             </aside>

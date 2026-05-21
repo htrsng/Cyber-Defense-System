@@ -3,8 +3,7 @@ import {
     AreaChart, Area, BarChart, Bar, XAxis, YAxis,
     Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts';
-import { riskAPI, tarpitAPI, twoFactorAPI } from '../services/api';
-import { useAuth } from '../hooks/useAuth';
+import { riskAPI } from '../services/api';
 
 // ─── Mock data generators (replaced by real API in prod) ─────────────────────
 function genTimeSeriesData() {
@@ -42,65 +41,16 @@ const CustomTooltip = ({ active, payload, label }) => {
     );
 };
 
-function calculateTarpitDelay(riskScore) {
-    const tarpitThreshold = 40;
-    const blockThreshold = 80;
-    const minDelay = 3000;
-    const maxDelay = 30000;
-
-    if (riskScore >= blockThreshold) return maxDelay;
-
-    const ratio = (riskScore - tarpitThreshold) / (blockThreshold - tarpitThreshold);
-    return Math.floor(minDelay + ratio * (maxDelay - minDelay));
-}
-
-function tarpitColor(score) {
-    if (score >= 80) return 'var(--red)';
-    if (score >= 60) return 'var(--orange)';
-    return 'var(--amber)';
-}
-
-function formatDelay(ms) {
-    if (!Number.isFinite(ms)) return '—';
-    if (ms >= 1000) return `${Math.round(ms / 1000)}s`;
-    return `${ms}ms`;
-}
-
-export default function OverviewPage({ liveAlerts, recentLogs, tarpitEvents = [] }) {
-    const { user } = useAuth();
+export default function OverviewPage({ liveAlerts, recentLogs }) {
     const [timeData] = useState(genTimeSeriesData);
     const [topIPs, setTopIPs] = useState([]);
     const [stats, setStats] = useState(null);
-    const [tarpitStatus, setTarpitStatus] = useState([]);
-    const [now, setNow] = useState(Date.now());
-    const [twoFactorStatus, setTwoFactorStatus] = useState(null);
-    const [twoFactorLoading, setTwoFactorLoading] = useState(false);
-    const [twoFactorMessage, setTwoFactorMessage] = useState('');
-    const [twoFactorError, setTwoFactorError] = useState('');
-    const [twoFactorOtp, setTwoFactorOtp] = useState('');
-    const [setupData, setSetupData] = useState(null);
     const [exportLoading, setExportLoading] = useState(false);
     const [exportRange, setExportRange] = useState(24);
-
-    const refreshTwoFactorStatus = () => {
-        twoFactorAPI.status()
-            .then(r => setTwoFactorStatus(r.data))
-            .catch(() => { });
-    };
-
-    const refreshTarpitStatus = () => {
-        tarpitAPI.status()
-            .then(r => setTarpitStatus(r.data.tarpit || r.data.tarpitted || []))
-            .catch(() => { });
-    };
 
     useEffect(() => {
         riskAPI.getTopIPs().then(r => setTopIPs(r.data.top || [])).catch(() => { });
         riskAPI.getStats().then(r => setStats(r.data)).catch(() => { });
-        if (user) {
-            refreshTwoFactorStatus();
-            refreshTarpitStatus();
-        }
     }, []);
 
     useEffect(() => {
@@ -124,98 +74,10 @@ export default function OverviewPage({ liveAlerts, recentLogs, tarpitEvents = []
             riskAPI.getTopIPs()
                 .then(r => setTopIPs(r.data.top || []))
                 .catch(() => { });
-            refreshTarpitStatus();
         }, 30000);
 
         return () => clearInterval(interval);
     }, []);
-
-    useEffect(() => {
-        const timer = setInterval(() => setNow(Date.now()), 1000);
-        return () => clearInterval(timer);
-    }, []);
-
-    useEffect(() => {
-        if (!tarpitEvents.length) return;
-
-        setTarpitStatus((prev) => {
-            const next = [...prev];
-
-            tarpitEvents.slice(0, 10).forEach((event) => {
-                const normalized = {
-                    ip: event.ipAddress,
-                    riskScore: event.riskScore,
-                    delayMs: event.delayMs,
-                    timestamp: event.timestamp,
-                    ttl: event.ttl ?? 300,
-                    endpoint: event.endpoint,
-                };
-
-                const existingIndex = next.findIndex((item) => item.ip === normalized.ip);
-                if (existingIndex >= 0) {
-                    next[existingIndex] = { ...next[existingIndex], ...normalized };
-                } else {
-                    next.unshift(normalized);
-                }
-            });
-
-            return next.slice(0, 10);
-        });
-    }, [tarpitEvents]);
-
-    useEffect(() => {
-        if (user) {
-            refreshTwoFactorStatus();
-        }
-    }, [user]);
-
-    const startTwoFactorSetup = async () => {
-        setTwoFactorLoading(true);
-        setTwoFactorError('');
-        setTwoFactorMessage('');
-        try {
-            const { data } = await twoFactorAPI.setup();
-            setSetupData(data);
-            setTwoFactorMessage(data.message || 'Scan QR code to continue');
-            refreshTwoFactorStatus();
-        } catch (error) {
-            setTwoFactorError(error.response?.data?.error || 'Failed to start 2FA setup');
-        } finally {
-            setTwoFactorLoading(false);
-        }
-    };
-
-    const confirmTwoFactorSetup = async () => {
-        setTwoFactorLoading(true);
-        setTwoFactorError('');
-        try {
-            await twoFactorAPI.verify({ token: twoFactorOtp });
-            setTwoFactorMessage('2FA enabled successfully');
-            setSetupData(null);
-            setTwoFactorOtp('');
-            refreshTwoFactorStatus();
-        } catch (error) {
-            setTwoFactorError(error.response?.data?.error || 'Invalid OTP');
-        } finally {
-            setTwoFactorLoading(false);
-        }
-    };
-
-    const disableTwoFactor = async () => {
-        setTwoFactorLoading(true);
-        setTwoFactorError('');
-        try {
-            await twoFactorAPI.disable({ token: twoFactorOtp });
-            setTwoFactorMessage('2FA disabled');
-            setSetupData(null);
-            setTwoFactorOtp('');
-            refreshTwoFactorStatus();
-        } catch (error) {
-            setTwoFactorError(error.response?.data?.error || 'Invalid OTP');
-        } finally {
-            setTwoFactorLoading(false);
-        }
-    };
 
     async function handleExportPDF() {
         setExportLoading(true);
@@ -281,10 +143,10 @@ export default function OverviewPage({ liveAlerts, recentLogs, tarpitEvents = []
         SCANNING_DETECTED: 'medium',
     };
 
-    // Deduplicate: keep only the latest alert per type
+    // Deduplicate: keep only one alert per attack type family.
     const uniqueAlerts = liveAlerts.reduce((acc, alert) => {
-        const key = alert.type;
-        if (!acc.find(a => a.type === key)) acc.push(alert);
+        const key = alert.type?.split('_').slice(0, 2).join('_');
+        if (!acc.find(a => a.type?.split('_').slice(0, 2).join('_') === key)) acc.push(alert);
         return acc;
     }, []).slice(0, 4);
 
@@ -320,152 +182,26 @@ export default function OverviewPage({ liveAlerts, recentLogs, tarpitEvents = []
                 </button>
             </div>
 
-            <div className="card" style={{ marginBottom: 20 }}>
-                <div className="card-header">
-                    <span className="card-title">Account Security / 2FA</span>
-                    <span className={`badge ${twoFactorStatus?.enabled ? 'safe' : 'low'}`}>
-                        {twoFactorStatus?.enabled ? 'ENABLED' : 'DISABLED'}
-                    </span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'start' }}>
-                    <div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
-                            {user?.email || '—'}
-                        </div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-primary)', marginBottom: 10 }}>
-                            {twoFactorStatus?.enabled
-                                ? 'Two-Factor Authentication is active for this account.'
-                                : 'Enable TOTP 2FA to require one-time codes during login.'}
-                        </div>
-
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
-                            <button className="btn btn-primary" onClick={startTwoFactorSetup} disabled={twoFactorLoading}>
-                                {twoFactorLoading ? '⟳ ĐANG XỬ LÝ...' : '▶ THIẾT LẬP 2FA'}
-                            </button>
-                            <button className="btn btn-ghost" onClick={disableTwoFactor} disabled={twoFactorLoading || !twoFactorStatus?.enabled}>
-                                TẮT 2FA
-                            </button>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-                            <input
-                                type="text"
-                                value={twoFactorOtp}
-                                onChange={e => setTwoFactorOtp(e.target.value)}
-                                placeholder="Enter OTP for verify/disable"
-                                style={{
-                                    minWidth: 260,
-                                    background: 'var(--bg-base)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: 'var(--radius)',
-                                    padding: '8px 14px',
-                                    color: 'var(--text-primary)',
-                                    fontFamily: 'var(--font-mono)',
-                                    fontSize: 13,
-                                    outline: 'none',
-                                }}
-                            />
-                            <button className="btn btn-ghost" onClick={confirmTwoFactorSetup} disabled={twoFactorLoading || !setupData}>
-                                XÁC MINH & BẬT
-                            </button>
-                        </div>
-
-                        {twoFactorMessage && (
-                            <div style={{ color: 'var(--green)', fontFamily: 'var(--font-mono)', fontSize: 12, marginBottom: 8 }}>
-                                {twoFactorMessage}
-                            </div>
-                        )}
-                        {twoFactorError && (
-                            <div style={{ color: 'var(--red)', fontFamily: 'var(--font-mono)', fontSize: 12, marginBottom: 8 }}>
-                                {twoFactorError}
-                            </div>
-                        )}
-                    </div>
-
-                    {setupData?.qrCodeUrl && (
-                        <div style={{ textAlign: 'center' }}>
-                            <img
-                                src={setupData.qrCodeUrl}
-                                alt="2FA QR Code"
-                                style={{ width: 160, height: 160, borderRadius: 8, border: '1px solid var(--border)', background: '#fff' }}
-                            />
-                            <div style={{ marginTop: 8, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', wordBreak: 'break-word', maxWidth: 180 }}>
-                                {setupData.secret}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* ── Tarpit status ── */}
-            <div className="card" style={{ marginBottom: 20 }}>
-                <div className="card-header">
-                    <span className="card-title">TARPIT STATUS</span>
-                    <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.12)', color: 'var(--amber)', borderColor: 'rgba(245, 158, 11, 0.28)' }}>
-                        {tarpitStatus.length} ACTIVE
-                    </span>
-                </div>
-
-                {tarpitStatus.length === 0 ? (
-                    <div className="empty-state">Chưa có IP nào đang bị tarpit</div>
-                ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {tarpitStatus.map((item) => {
-                            const delayMs = item.delayMs ?? calculateTarpitDelay(item.riskScore);
-                            const eventTime = item.timestamp ? new Date(item.timestamp).getTime() : null;
-                            const elapsed = eventTime ? Math.max(0, now - eventTime) : Math.max(0, (300 - Math.max(item.ttl ?? 0, 0)) * 1000);
-                            const progress = eventTime
-                                ? Math.min(100, (elapsed / delayMs) * 100)
-                                : Math.min(100, ((300 - Math.max(item.ttl ?? 0, 0)) / 300) * 100);
-
-                            return (
-                                <div key={item.ip} style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 10, background: 'var(--bg-panel)' }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto auto', gap: 12, alignItems: 'center', marginBottom: 10 }}>
-                                        <span className="ip-tag" style={{ width: 'fit-content' }}>{item.ip}</span>
-                                        <span className="badge" style={{ color: tarpitColor(item.riskScore), background: `${tarpitColor(item.riskScore)}18`, borderColor: `${tarpitColor(item.riskScore)}44` }}>
-                                            Risk {item.riskScore}
-                                        </span>
-                                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)' }}>
-                                            Delay {formatDelay(delayMs)}
-                                        </span>
-                                    </div>
-
-                                    <div className="risk-bar" style={{ height: 8 }}>
-                                        <div
-                                            className="risk-bar-fill"
-                                            style={{ width: `${progress}%`, background: tarpitColor(item.riskScore), transition: 'width 0.9s linear' }}
-                                        />
-                                    </div>
-
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)' }}>
-                                        <span>{item.endpoint || '/api/auth/login'}</span>
-                                        <span>{eventTime ? `${Math.max(0, Math.ceil((delayMs - elapsed) / 1000))}s remaining` : `TTL ${item.ttl ?? '—'}s`}</span>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
-
             {/* ── Live alerts ── */}
-            {uniqueAlerts.map((alert, i) => (
-                <div key={i} className={`alert-banner ${ALERT_SEVERITY[alert.type] || alert.severity}`}>
-                    <span style={{ flexShrink: 0 }}>⚠</span>
-                    <div>
-                        <strong>{ALERT_LABELS[alert.type] || alert.type?.replace(/_/g, ' ')}</strong>
-                        {' — '}
-                        <span className="ip-tag">{alert.ipAddress}</span>
-                        {' '}
-                        Risk Score: <strong>{alert.riskScore}</strong>
-                        {alert.description && <span style={{ opacity: 0.8 }}> — {alert.description}</span>}
+            {uniqueAlerts.map((alert, i) => {
+                const alertIP = alert.ipAddress || alert.ip || alert.data?.ipAddress || 'Unknown IP';
+                return (
+                    <div key={i} className={`alert-banner ${ALERT_SEVERITY[alert.type] || alert.severity}`}>
+                        <span style={{ flexShrink: 0 }}>⚠</span>
+                        <div>
+                            <strong>{ALERT_LABELS[alert.type] || alert.type?.replace(/_/g, ' ')}</strong>
+                            {' — '}
+                            <span className="ip-tag">{alertIP}</span>
+                            {' '}
+                            Risk Score: <strong>{alert.riskScore}</strong>
+                            {alert.description && <span style={{ opacity: 0.8 }}> — {alert.description}</span>}
+                        </div>
+                        <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11, opacity: 0.6, flexShrink: 0 }}>
+                            {new Date(alert.timestamp).toLocaleTimeString()}
+                        </span>
                     </div>
-                    <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11, opacity: 0.6, flexShrink: 0 }}>
-                        {new Date(alert.timestamp).toLocaleTimeString()}
-                    </span>
-                </div>
-            ))}
+                );
+            })}
 
             {/* ── Stat tiles ── */}
             <div className="stat-grid">

@@ -350,6 +350,11 @@ JWT_EXPIRES_IN=7d
 RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX=100
 
+# PayGuard demo mode
+# unprotected = initial vulnerable demo
+# protected = security enabled, attack traffic blocked
+PAYGUARD_SECURITY_MODE=unprotected
+
 # GeoIP Security
 BLOCKED_COUNTRIES=KP,IR,CU,SY
 BLOCK_TOR=true

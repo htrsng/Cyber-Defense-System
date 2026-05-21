@@ -16,6 +16,7 @@ const SecurityEvent = require('../models/SecurityEvent');
 
 async function seedUsers() {
     const users = [
+        { email: 'admin@cyberdef.io', password: 'Admin@123', role: 'admin' },
         { email: 'tranghuyen20051312@gmail.com', password: 'Admin@123', role: 'admin' },
         { email: 'viewer@cyberdef.io', password: 'Viewer@123', role: 'viewer' },
     ];

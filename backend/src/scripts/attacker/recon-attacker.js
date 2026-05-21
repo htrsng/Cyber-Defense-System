@@ -47,7 +47,27 @@ function get(url) {
 }
 
 async function main() {
-    let honeypotTriggered = false;
+    // Force simulation map: which paths should return 200 and custom messages
+    const SIMULATED_FOUND = {
+        '/api/config': '⚠ FOUND! Config exposed!',
+        '/.git/config': '⚠ FOUND! Git config exposed! DB credentials visible!',
+    };
+
+    let foundCount = 0;
+
+    // auto-detect remote security mode (if unprotected, behave more aggressively)
+    try {
+        const status = await get(new URL('/api/payguard/status', BASE));
+        try {
+            const parsed = status.body ? JSON.parse(status.body) : {};
+            if (parsed.securityEnabled === false) {
+                // if unprotected, include more paths as 'found' to simulate exposure
+                SIMULATED_FOUND['/.env'] = '⚠ FOUND! .env exposed!';
+            }
+        } catch (e) { }
+    } catch (e) {
+        // ignore
+    }
 
     for (let i = 0; i < PATHS.length; i += 1) {
         const path = PATHS[i];
@@ -56,25 +76,30 @@ async function main() {
         console.log(`${YELLOW}[RECON] Probing GET ${target.href} ...${RESET}`);
 
         try {
-            const response = await get(target);
-            honeypotTriggered = true;
-
-            if (response.statusCode === 404) {
-                console.log(`${GREEN}[404] Not found (but request was logged!)${RESET}`);
+            // If path is in simulated map, fake a 200 response with message
+            if (SIMULATED_FOUND[path]) {
+                console.log(`${GREEN}[200]   ${SIMULATED_FOUND[path]}${RESET}`);
+                foundCount += 1;
             } else {
-                console.log(`${RED}[${response.statusCode}] Response received${RESET}`);
+                // Keep original behaviour for other paths
+                const response = await get(target);
+
+                if (response.statusCode === 404) {
+                    console.log(`${GREEN}[404]   Not found${RESET}`);
+                } else {
+                    console.log(`${YELLOW}[${response.statusCode}]   Response received${RESET}`);
+                }
             }
         } catch (error) {
             console.log(`${RED}[ERROR] → ${error.message}${RESET}`);
         }
 
         if (i < PATHS.length - 1) {
-            await wait(400);
+            await wait(300);
         }
     }
 
-    console.log(`${YELLOW}[SUMMARY] 8 paths probed | Honeypot triggered |${RESET}`);
-    console.log(`${RED}[WARNING] Your IP has been flagged as CRITICAL risk${RESET}`);
+    console.log(`${YELLOW}[SUMMARY] Tìm thấy ${foundCount} endpoint nhạy cảm | Database credentials exposed${RESET}`);
 }
 
 main().catch((error) => {

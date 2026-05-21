@@ -11,10 +11,35 @@ const connectDB = require('./config/database');
 const redis = require('./config/redis');
 const { authMiddleware, adminMiddleware } = require('./middleware/auth');
 
+// Global security toggle for demo mode (Before & After scenario)
+global.IS_SECURITY_ENABLED = false;
+
 const app = express();
 const server = http.createServer(app);
 
-const allowedOrigins = ['http://localhost:3000', 'http://localhost:3001'];
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:4000',
+  'http://localhost:4001',
+];
+
+const envOrigins = [process.env.FRONTEND_URL, process.env.PAYGUARD_URL]
+  .filter(Boolean)
+  .map((origin) => {
+    if (/^https?:\/\//i.test(origin)) {
+      return origin;
+    }
+    return `http://${origin}`;
+  });
+
+const allowedOriginSet = new Set([...allowedOrigins, ...envOrigins]);
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (allowedOriginSet.has(origin)) return true;
+  return /^http:\/\/localhost:\d+$/.test(origin);
+}
 
 app.set('trust proxy', true);
 
@@ -31,23 +56,53 @@ app.use((req, res, next) => {
 
 // Socket.io — real-time push tới dashboard
 const io = new Server(server, {
-  cors: { origin: allowedOrigins, methods: ['GET', 'POST'] }
+  cors: {
+    origin: (origin, callback) => {
+      if (isAllowedOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
+    methods: ['GET', 'POST'],
+    credentials: true,
+  }
 });
 app.set('io', io); // chia sẻ io instance cho toàn bộ service
+
+// Conditional middleware wrapper for security checks
+// When global.IS_SECURITY_ENABLED === false, skip security-related middleware
+const conditionalSecurityMiddleware = (securityMiddleware) => {
+  return (req, res, next) => {
+    if (!global.IS_SECURITY_ENABLED) {
+      // Security disabled - skip this middleware and proceed directly
+      return next();
+    }
+    // Security enabled - run the middleware
+    securityMiddleware(req, res, next);
+  };
+};
 
 // Middleware
 app.use(helmet());
 app.use(require('./middleware/geoip'));
-app.use(cors({ origin: allowedOrigins, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    if (isAllowedOrigin(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(morgan('combined'));
-app.use(rateLimit({
+app.use(conditionalSecurityMiddleware(rateLimit({
   windowMs: 15 * 60 * 1000,
   max: Number(process.env.GLOBAL_RATE_LIMIT_MAX || 1000),
   standardHeaders: true,
   legacyHeaders: false,
-}));
-app.use(require('./middleware/tarpit'));
+})));
+app.use(conditionalSecurityMiddleware(require('./middleware/tarpit')));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -58,6 +113,8 @@ app.use('/api/logs', require('./routes/logs'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/simulate', require('./routes/simulate'));
 app.use('/api/risk', require('./routes/risk'));
+app.use('/api/demo', require('./routes/demo'));
+app.use('/api/payguard', require('./routes/payguard'));
 app.use('/api/xss', require('./routes/xss'));
 app.use('/api/reports', authMiddleware, require('./routes/reports'));
 app.use('/api/admin', authMiddleware, adminMiddleware, require('./routes/admin'));

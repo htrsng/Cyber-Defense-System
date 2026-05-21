@@ -113,7 +113,7 @@ export default function LoginPage() {
                                 EMAIL
                             </label>
                             <input type="email" value={email} onChange={e => setEmail(e.target.value)} disabled={step === 'otp'}
-                                placeholder="admin@cyberdef.io" style={inputStyle} required />
+                                placeholder="admin@cyberdef.io (demo)" style={inputStyle} required />
                         </div>
 
                         <div style={{ marginBottom: 24 }}>
