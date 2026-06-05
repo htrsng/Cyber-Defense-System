@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { io } from 'socket.io-client';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
@@ -14,14 +15,45 @@ const fmtShort = (v) => {
   return fmtVND(n);
 };
 
+const DEMO_WALLET_STORAGE_KEY = 'payguard:demo-wallet';
+
+function clampWalletBalance(wallet) {
+  if (!wallet) return null;
+  return {
+    ...DEMO_WALLET,
+    ...wallet,
+    balance: Math.max(0, Number(wallet.balance ?? DEMO_WALLET.balance)),
+    categories: Array.isArray(wallet.categories) && wallet.categories.length ? wallet.categories : DEFAULT_CATEGORIES,
+  };
+}
+
+function readPersistedWallet() {
+  try {
+    const raw = localStorage.getItem(DEMO_WALLET_STORAGE_KEY);
+    if (!raw) return null;
+    return clampWalletBalance(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+function persistWallet(wallet) {
+  try {
+    const next = clampWalletBalance(wallet);
+    if (next) localStorage.setItem(DEMO_WALLET_STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // ignore storage failures
+  }
+}
+
 /* ─── Static data ─── */
 const DEFAULT_CATEGORIES = [
-  { name: 'Ăn uống',   budget: 3000000, spent: 1200000, color: '#10b981', icon: '🍜' },
-  { name: 'Di chuyển', budget: 1000000, spent: 450000,  color: '#6366f1', icon: '🚗' },
-  { name: 'Mua sắm',   budget: 2000000, spent: 800000,  color: '#8b5cf6', icon: '🛍️' },
-  { name: 'Giải trí',  budget: 500000,  spent: 200000,  color: '#f59e0b', icon: '🎮' },
-  { name: 'Hóa đơn',   budget: 1500000, spent: 1500000, color: '#ef4444', icon: '💡' },
-  { name: 'Tiết kiệm', budget: 2000000, spent: 500000,  color: '#fbbf24', icon: '💰' },
+  { name: 'Ăn uống', budget: 3000000, spent: 1200000, color: '#82ddaf', icon: '🍜' },
+  { name: 'Di chuyển', budget: 1000000, spent: 450000, color: '#fbb1c5', icon: '🚗' },
+  { name: 'Mua sắm', budget: 2000000, spent: 800000, color: '#fce4ec', icon: '🛍️' },
+  { name: 'Giải trí', budget: 500000, spent: 200000, color: '#f59e0b', icon: '🎮' },
+  { name: 'Hóa đơn', budget: 1500000, spent: 1500000, color: '#ef4444', icon: '💡' },
+  { name: 'Tiết kiệm', budget: 2000000, spent: 500000, color: '#fbbf24', icon: '💰' },
 ];
 
 const DEMO_WALLET = {
@@ -30,17 +62,17 @@ const DEMO_WALLET = {
   bankLinked: true, bankName: 'Vietcombank', bankAccount: '****3456',
   categories: DEFAULT_CATEGORIES,
   transactions: [
-    { _id: '1', type: 'deposit',  description: 'Nạp tiền ví',           amount: 5000000, status: 'success', ipAddress: '127.0.0.1', riskScore: 0,  createdAt: new Date(Date.now() - 7200000).toISOString() },
-    { _id: '2', type: 'transfer', description: 'Thanh toán mua hàng',   amount: 850000,  status: 'success', ipAddress: '10.0.0.12', riskScore: 18, createdAt: new Date(Date.now() - 3600000).toISOString() },
-    { _id: '3', type: 'withdraw', description: 'Rút tiền về ngân hàng', amount: 250000,  status: 'success', ipAddress: '10.0.0.12', riskScore: 5,  createdAt: new Date(Date.now() - 1800000).toISOString() },
+    { _id: '1', type: 'deposit', description: 'Nạp tiền ví', amount: 5000000, status: 'success', ipAddress: '127.0.0.1', riskScore: 0, createdAt: new Date(Date.now() - 7200000).toISOString() },
+    { _id: '2', type: 'transfer', description: 'Thanh toán mua hàng', amount: 850000, status: 'success', ipAddress: '10.0.0.12', riskScore: 18, createdAt: new Date(Date.now() - 3600000).toISOString() },
+    { _id: '3', type: 'withdraw', description: 'Rút tiền về ngân hàng', amount: 250000, status: 'success', ipAddress: '10.0.0.12', riskScore: 5, createdAt: new Date(Date.now() - 1800000).toISOString() },
   ],
 };
 
 const RECIPIENTS = [
-  { name: 'Nguyễn Văn A', account: 'PAY-00123', avatar: '👨', color: '#6366f1' },
-  { name: 'Trần Thị B',   account: 'PAY-00456', avatar: '👩', color: '#10b981' },
-  { name: 'Lê Văn C',     account: 'PAY-00789', avatar: '🧑', color: '#f59e0b' },
-  { name: 'Phạm Thị D',   account: 'PAY-00999', avatar: '👧', color: '#8b5cf6' },
+  { name: 'Nguyễn Văn A', account: 'PAY-00123', avatar: '👨', color: '#fbb1c5' },
+  { name: 'Trần Thị B', account: 'PAY-00456', avatar: '👩', color: '#82ddaf' },
+  { name: 'Lê Văn C', account: 'PAY-00789', avatar: '🧑', color: '#f59e0b' },
+  { name: 'Phạm Thị D', account: 'PAY-00999', avatar: '👧', color: '#fce4ec' },
 ];
 
 const BANKS = ['Vietcombank', 'Techcombank', 'MBBank', 'TPBank', 'VietinBank', 'BIDV', 'ACB', 'VPBank'];
@@ -59,7 +91,7 @@ function getRiskColor(s) {
   if (s >= 60) return '#fb923c';
   if (s >= 35) return '#f59e0b';
   if (s >= 15) return '#22d3ee';
-  return '#10b981';
+  return '#82ddaf';
 }
 function getRiskLevel(s) {
   if (s >= 80) return 'critical';
@@ -80,7 +112,7 @@ function getRiskLabel(s) {
 function useCountUp(target, ms = 700) {
   const [val, setVal] = useState(target);
   const prev = useRef(target);
-  const raf  = useRef(null);
+  const raf = useRef(null);
   useEffect(() => {
     const start = prev.current, end = target;
     if (start === end) return;
@@ -100,14 +132,14 @@ function useCountUp(target, ms = 700) {
 
 /* ─── Code Shield Modal ─── */
 const CODE_LINES = [
-  { cmd: 'app.use(cyberDefRateLimit)',   comment: '// Đếm & giới hạn request theo IP' },
-  { cmd: 'app.use(cyberDefTarpit)',      comment: '// Làm chậm bot tấn công tự động' },
+  { cmd: 'app.use(cyberDefRateLimit)', comment: '// Đếm & giới hạn request theo IP' },
+  { cmd: 'app.use(cyberDefTarpit)', comment: '// Làm chậm bot tấn công tự động' },
   { cmd: 'app.use(cyberDefRiskScorer)', comment: '// Tính điểm nguy cơ AI (0–100)' },
 ];
 
 function CodeShieldModal({ onClose }) {
   const [visible, setVisible] = useState(0);
-  const [done, setDone]       = useState(false);
+  const [done, setDone] = useState(false);
   useEffect(() => {
     const timers = CODE_LINES.map((_, i) => setTimeout(() => setVisible(v => v + 1), 700 + i * 950));
     const dt = setTimeout(() => setDone(true), 700 + CODE_LINES.length * 950 + 400);
@@ -147,7 +179,7 @@ function ToastStack({ toasts }) {
         <div key={t.id} style={{
           background: 'rgba(13,20,36,0.97)',
           border: `1px solid ${t.tone === 'danger' ? 'rgba(239,68,68,.4)' : t.tone === 'success' ? 'rgba(16,185,129,.4)' : 'rgba(245,158,11,.4)'}`,
-          borderLeft: `4px solid ${t.tone === 'danger' ? '#ef4444' : t.tone === 'success' ? '#10b981' : '#f59e0b'}`,
+          borderLeft: `4px solid ${t.tone === 'danger' ? '#ef4444' : t.tone === 'success' ? '#82ddaf' : '#f59e0b'}`,
           borderRadius: 16, padding: '14px 16px',
           boxShadow: '0 16px 48px rgba(0,0,0,.35)',
           animation: 'slide-in-right 300ms ease',
@@ -162,7 +194,7 @@ function ToastStack({ toasts }) {
 
 /* ─── Spending Donut Chart ─── */
 function SpendingChart({ categories }) {
-  const data  = categories.map(c => ({ name: c.name, value: c.spent, color: c.color }));
+  const data = categories.map(c => ({ name: c.name, value: c.spent, color: c.color }));
   const total = categories.reduce((s, c) => s + c.spent, 0);
   return (
     <div className="pg-chart-wrap">
@@ -174,8 +206,8 @@ function SpendingChart({ categories }) {
             </Pie>
             <Tooltip
               formatter={(v) => [fmtVND(v), '']}
-              contentStyle={{ background: '#0d1424', border: '1px solid rgba(255,255,255,.1)', borderRadius: 12, fontSize: 12 }}
-              itemStyle={{ color: '#f1f5f9' }}
+              contentStyle={{ background: '#ffffff', border: '1px solid rgba(0,0,0,.1)', borderRadius: 12, fontSize: 12 }}
+              itemStyle={{ color: '#0f172a' }}
             />
           </PieChart>
         </ResponsiveContainer>
@@ -203,20 +235,103 @@ function SpendingChart({ categories }) {
   );
 }
 
+/* ─── Category Modal ─── */
+const CAT_EMOJIS = ['🍜','🚗','🛍️','🎮','💡','💰','🏥','📚','✈️','🏠','👕','☕','🎬','💻','🎁','📱'];
+const CAT_COLORS = ['#2563eb','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#06b6d4'];
+
+function CategoryModal({ cat, onSave, onClose }) {
+  const [form, setForm] = useState({
+    name: cat?.name || '',
+    icon: cat?.icon || '🍜',
+    color: cat?.color || '#2563eb',
+    budget: cat?.budget ? String(cat.budget) : '',
+  });
+  const isEdit = !!cat;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.name.trim() || !form.budget) return;
+    onSave({
+      name: form.name.trim(),
+      icon: form.icon,
+      color: form.color,
+      budget: Number(String(form.budget).replace(/[^0-9]/g, '')),
+      spent: cat?.spent || 0,
+    });
+  };
+
+  return (
+    <div className="pg-cat-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="pg-cat-modal">
+        <div className="pg-cat-modal-title">{isEdit ? '✏️ Sửa danh mục' : '➕ Thêm danh mục mới'}</div>
+        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 16 }}>
+          <div>
+            <div className="pg-field-label">Chọn biểu tượng</div>
+            <div className="pg-emoji-grid">
+              {CAT_EMOJIS.map(e => (
+                <button type="button" key={e} className={`pg-emoji-btn${form.icon === e ? ' selected' : ''}`} onClick={() => setForm(f => ({ ...f, icon: e }))}>{e}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="pg-field-label">Chọn màu sắc</div>
+            <div className="pg-color-grid">
+              {CAT_COLORS.map(c => (
+                <button type="button" key={c} className={`pg-color-btn${form.color === c ? ' selected' : ''}`} style={{ background: c }} onClick={() => setForm(f => ({ ...f, color: c }))} />
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="pg-field-label">Tên danh mục</div>
+            <input className="pg-input" placeholder="VD: Ăn uống, Xăng xe..." value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} autoFocus />
+          </div>
+          <div>
+            <div className="pg-field-label">Ngân sách hàng tháng</div>
+            <div className="pg-amount-input-wrap">
+              <span className="pg-amount-currency">₫</span>
+              <input className="pg-input" placeholder="VD: 3000000" inputMode="numeric" value={form.budget} onChange={e => setForm(f => ({ ...f, budget: e.target.value }))} />
+            </div>
+          </div>
+          <div className="pg-modal-btns">
+            <button type="button" className="pg-modal-cancel-btn" onClick={onClose}>Hủy</button>
+            <button type="submit" className="pg-submit-btn" disabled={!form.name.trim() || !form.budget}>
+              {isEdit ? '💾 Lưu thay đổi' : '➕ Thêm danh mục'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Transaction Item ─── */
 const TX_ICONS = { deposit: '💚', transfer: '💸', withdraw: '🏦', blocked: '🚫', exploit: '💀', wipe: '⚠️', default: '📄' };
 function TxItem({ tx }) {
-  const isCredit  = tx.type === 'deposit';
+  const isCredit = tx.type === 'deposit';
   const isBlocked = tx.status === 'blocked' || ['exploit', 'wipe', 'data_tamper'].includes(tx.type);
-  const iconKey   = isBlocked ? 'blocked' : (TX_ICONS[tx.type] ? tx.type : 'default');
+  const iconKey = isBlocked ? 'blocked' : (TX_ICONS[tx.type] ? tx.type : 'default');
+  
+  let catName = 'Giao dịch';
+  let catIcon = TX_ICONS[iconKey] || TX_ICONS.default;
+  let catColor = '#94a3b8';
+  
+  if (tx.description?.toLowerCase().includes('mua hàng')) { catName = 'Mua sắm'; catIcon = '🛍️'; catColor = '#fce4ec'; }
+  else if (tx.description?.toLowerCase().includes('ăn')) { catName = 'Ăn uống'; catIcon = '🍔'; catColor = '#82ddaf'; }
+  else if (tx.description?.toLowerCase().includes('nạp tiền')) { catName = 'Tiết kiệm'; catIcon = '💰'; catColor = '#fbbf24'; }
+  else if (tx.description?.toLowerCase().includes('rút tiền')) { catName = 'Ngân hàng'; catIcon = '🏦'; catColor = '#0284c7'; }
+  
+  if (isBlocked) { catName = 'Bị chặn'; catIcon = '🚫'; catColor = '#e11d48'; }
+
   return (
-    <div className="pg-tx-item">
-      <div className={`pg-tx-icon ${isBlocked ? 'blocked' : (tx.type || 'default')}`}>{TX_ICONS[iconKey] || TX_ICONS.default}</div>
+    <div className="pg-tx-item pg-shadow-sm pg-hover-elevate">
+      <div className="pg-tx-icon" style={{ background: `${catColor}22`, fontSize: 20 }}>{catIcon}</div>
       <div className="pg-tx-info">
-        <div className="pg-tx-desc">{tx.description || tx.type}</div>
-        <div className="pg-tx-meta">
-          {format(new Date(tx.createdAt || Date.now()), 'dd/MM/yyyy HH:mm')}
-          {tx.ipAddress && tx.ipAddress !== '127.0.0.1' && ` · IP: ${tx.ipAddress}`}
+        <div className="pg-tx-merchant">{tx.description || tx.type}</div>
+        <div className="pg-tx-cat">
+          <span style={{ color: catColor, fontWeight: 700 }}>{catName}</span>
+          <span style={{ opacity: 0.5 }}>•</span>
+          <span>{format(new Date(tx.createdAt || Date.now()), 'dd/MM/yyyy HH:mm')}</span>
+          {tx.ipAddress && tx.ipAddress !== '127.0.0.1' && <><span style={{ opacity: 0.5 }}>•</span><span>IP: {tx.ipAddress}</span></>}
         </div>
       </div>
       <div className="pg-tx-right">
@@ -236,7 +351,7 @@ function TxItem({ tx }) {
 
 /* ─── Feed Item ─── */
 function FeedItem({ item }) {
-  const cls  = item.type === 'success' ? 'success' : item.type === 'tarpit' ? 'tarpit' : item.type === 'blocked' ? 'blocked' : 'info';
+  const cls = item.type === 'success' ? 'success' : item.type === 'tarpit' ? 'tarpit' : item.type === 'blocked' ? 'blocked' : 'info';
   const icon = item.type === 'success' ? '✓' : item.type === 'tarpit' ? '⏱' : item.type === 'blocked' ? '✗' : 'ℹ';
   return (
     <div className={`pg-feed-item ${cls}`}>
@@ -250,16 +365,16 @@ function FeedItem({ item }) {
 
 /* ─── Login Page ─── */
 function LoginPage({ onLogin }) {
-  const [email,    setEmail]    = useState('tranghuyen20051312@gmail.com');
+  const [email, setEmail] = useState('tranghuyen20051312@gmail.com');
   const [password, setPassword] = useState('Admin@123');
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      const res  = await fetch(`${API_URL}/api/auth/login`, {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
@@ -302,38 +417,118 @@ function LoginPage({ onLogin }) {
   );
 }
 
+/* ─── 2FA Page ─── */
+function TwoFAPage({ onVerify }) {
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [attempts, setAttempts] = useState(0);
+
+  const submit = (e) => {
+    e.preventDefault();
+    setLoading(true); setError('');
+    setTimeout(() => {
+      setLoading(false);
+      // For demo: pass if code is '123456'
+      if (code === '123456') {
+        onVerify();
+      } else {
+        setAttempts(a => a + 1);
+        if (attempts >= 2) {
+          setError('Tài khoản bị khóa tạm thời do nhập sai quá nhiều lần. (CyberDef Brute Force Defense)');
+        } else {
+          setError('Mã xác thực không hợp lệ');
+        }
+      }
+    }, 800);
+  };
+
+  return (
+    <div className="pg-login-shell">
+      <div className="pg-login-card">
+        <div className="pg-login-logo">
+          <div className="pg-login-shield" style={{ background: 'linear-gradient(135deg,rgba(245,158,11,.2),rgba(236,72,153,.1))', borderColor: 'rgba(245,158,11,.35)' }}>🔐</div>
+          <div className="pg-login-title">Xác thực 2 bước</div>
+          <div className="pg-login-sub">Nhập mã 6 số từ Google Authenticator</div>
+        </div>
+        <form className="pg-login-form" onSubmit={submit}>
+          {error && <div className="pg-login-error">⚠ {error}</div>}
+          <div>
+            <div className="pg-field-label">Mã xác thực (TOTP)</div>
+            <input className="pg-input" type="text" inputMode="numeric" maxLength={6} style={{ fontSize: 24, letterSpacing: '0.5em', textAlign: 'center', fontFamily: 'var(--pg-mono)' }} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))} autoFocus placeholder="------" />
+          </div>
+          <button className="pg-submit-btn" type="submit" disabled={loading || code.length !== 6 || attempts >= 3}>
+            {loading ? <><div className="pg-spinner" /> Đang kiểm tra...</> : 'Xác nhận'}
+          </button>
+        </form>
+        <div className="pg-demo-creds" style={{ textAlign: 'center' }}>
+          Demo: Nhập <strong>123456</strong> để qua<br/>
+          (Nhập sai 3 lần để xem block)
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Critical Alert Overlay ─── */
+function CriticalAlertOverlay({ type, onDismiss, ip }) {
+  if (!type) return null;
+  const isBlocked = type === 'blocked';
+  return (
+    <div className={`pg-critical-overlay ${isBlocked ? 'blocked' : 'danger'}`} onClick={onDismiss}>
+      <div>
+        <div className="pg-critical-icon">{isBlocked ? '🛡' : '⚠'}</div>
+        <div className="pg-critical-title">{isBlocked ? 'Tấn Công Bị Chặn' : 'HỆ THỐNG BỊ XÂM NHẬP'}</div>
+        <div className="pg-critical-sub">
+          {isBlocked 
+            ? 'CyberDef đã phát hiện và chặn đứng kết nối độc hại.'
+            : 'Phát hiện truy cập trái phép. Số dư ví đang bị tấn công!'}
+        </div>
+        {ip && <div className="pg-critical-ip">Nguồn: {ip}</div>}
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════
    MAIN APP
 ═══════════════════════════════════════════════════════════ */
 export default function App() {
   /* auth */
   const [user, setUser] = useState(() => parseToken(localStorage.getItem('token')));
+  const [needs2FA, setNeeds2FA] = useState(false);
 
   /* nav */
   const [page, setPage] = useState('dashboard');
 
   /* wallet */
-  const [wallet,        setWallet]        = useState(null);
+  const [wallet, setWallet] = useState(null);
   const [walletLoading, setWalletLoading] = useState(true);
 
   /* security */
   const [isSecurityEnabled, setIsSecurityEnabled] = useState(false);
-  const [securitySaving,    setSecuritySaving]    = useState(false);
-  const [showCodeModal,     setShowCodeModal]     = useState(false);
+  const [securitySaving, setSecuritySaving] = useState(false);
+  const [showCodeModal, setShowCodeModal] = useState(false);
 
   /* attack */
-  const [feedItems,   setFeedItems]   = useState([]);
+  const [feedItems, setFeedItems] = useState([]);
   const [attackStats, setAttackStats] = useState({ attempts: 0, blocked: 0, tarpit: 0, stolen: 0 });
   const [underAttack, setUnderAttack] = useState(false);
-  const [riskScore,   setRiskScore]   = useState(0);
+  const [riskScore, setRiskScore] = useState(0);
+  const [alertOverlay, setAlertOverlay] = useState(null);
 
   /* transfer form */
-  const [tForm,    setTForm]    = useState({ toAccount: '', amount: '', description: '', bank: 'Vietcombank' });
+  const [tForm, setTForm] = useState({ toAccount: '', amount: '', description: '', bank: 'Vietcombank' });
   const [tLoading, setTLoading] = useState(false);
 
   /* history */
-  const [histFilter,   setHistFilter]   = useState('all');
-  const [searchQuery,  setSearchQuery]  = useState('');
+  const [histFilter, setHistFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  /* category management */
+  const [catModal, setCatModal] = useState(false);
+  const [editingCat, setEditingCat] = useState(null);
+  const [deletingCat, setDeletingCat] = useState(null);
 
   /* toasts */
   const [toasts, setToasts] = useState([]);
@@ -345,11 +540,11 @@ export default function App() {
 
   /* animated balance */
   const displayBalance = useCountUp(wallet?.balance ?? 0);
-  const prevBal        = useRef(wallet?.balance ?? 0);
+  const prevBal = useRef(wallet?.balance ?? 0);
   const [balDir, setBalDir] = useState('');
   useEffect(() => {
     if (wallet?.balance === undefined) return;
-    if (wallet.balance < prevBal.current)      setBalDir('decreasing');
+    if (wallet.balance < prevBal.current) setBalDir('decreasing');
     else if (wallet.balance > prevBal.current) setBalDir('increasing');
     prevBal.current = wallet.balance;
     const t = setTimeout(() => setBalDir(''), 750);
@@ -359,23 +554,31 @@ export default function App() {
   /* fetch wallet */
   const fetchWallet = useCallback(async () => {
     const token = localStorage.getItem('token');
-    if (!token) { setWallet(DEMO_WALLET); setWalletLoading(false); return; }
+    if (!token) {
+      const storedWallet = readPersistedWallet() || DEMO_WALLET;
+      setWallet(storedWallet);
+      persistWallet(storedWallet);
+      setWalletLoading(false);
+      return;
+    }
     try {
-      const res  = await fetch(`${API_URL}/api/payguard/wallet`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API_URL}/api/payguard/wallet`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
-      setWallet(w => ({
-        ...DEMO_WALLET,
-        ...data.wallet,
-        categories: data.wallet?.categories?.length ? data.wallet.categories : DEFAULT_CATEGORIES,
-      }));
-    } catch { setWallet(DEMO_WALLET); }
-    finally  { setWalletLoading(false); }
+      const nextWallet = clampWalletBalance(data.wallet) || DEMO_WALLET;
+      setWallet(nextWallet);
+      persistWallet(nextWallet);
+    } catch {
+      const fallbackWallet = readPersistedWallet() || DEMO_WALLET;
+      setWallet(fallbackWallet);
+      persistWallet(fallbackWallet);
+    }
+    finally { setWalletLoading(false); }
   }, []);
 
   /* fetch security */
   const fetchSecurity = useCallback(async () => {
     try {
-      const res  = await fetch(`${API_URL}/api/payguard/status`);
+      const res = await fetch(`${API_URL}/api/payguard/status`);
       const data = await res.json();
       setIsSecurityEnabled(Boolean(data?.securityEnabled));
     } catch { /* ignore */ }
@@ -408,21 +611,33 @@ export default function App() {
   /* init */
   useEffect(() => { fetchWallet(); fetchSecurity(); }, [fetchWallet, fetchSecurity]);
 
-  /* keyboard shortcut Ctrl+Shift+S */
+  /* keyboard shortcut Ctrl+Shift+S / R */
   useEffect(() => {
     const handler = (e) => {
-      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        toggleSecurity(!isSecurityEnabled);
+      if (e.ctrlKey && e.shiftKey) {
+        if (e.key.toLowerCase() === 's') {
+          e.preventDefault();
+          toggleSecurity(!isSecurityEnabled);
+        }
+        if (e.key.toLowerCase() === 'r') {
+          e.preventDefault();
+          setWallet(w => ({ ...w, balance: 1000000000 }));
+          persistWallet({ ...wallet, balance: 1000000000 });
+          setAttackStats({ attempts: 0, blocked: 0, tarpit: 0, stolen: 0 });
+          setFeedItems([]);
+          setRiskScore(0);
+          setAlertOverlay(null);
+          toast('Đã reset', 'Khôi phục số dư về 1 Tỷ VNĐ và xóa log tấn công', 'success');
+        }
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [isSecurityEnabled]);
+  }, [isSecurityEnabled, wallet]);
 
   /* WebSocket */
   useEffect(() => {
-    const token  = localStorage.getItem('token');
+    const token = localStorage.getItem('token');
     const socket = io(API_URL, {
       transports: ['polling', 'websocket'],
       withCredentials: true,
@@ -430,45 +645,73 @@ export default function App() {
     });
 
     socket.on('transfer_attempt', (data) => {
-      const score     = Number(data?.score || 0);
+      const score = Number(data?.score || 0);
       const isBlocked = Boolean(data?.blocked);
       const hasTarpit = Number(data?.tarpitDelay) > 0;
-      const type      = isBlocked ? 'blocked' : hasTarpit ? 'tarpit' : 'success';
-      const elapsed   = hasTarpit
+      const type = isBlocked ? 'blocked' : hasTarpit ? 'tarpit' : 'success';
+      const elapsed = hasTarpit
         ? `${(Number(data.tarpitDelay) / 1000).toFixed(1)}s`
         : data?.elapsed ? `${data.elapsed}ms` : undefined;
       const text = isBlocked
         ? `Attempt #${data?.attempt || '?'} — BLOCKED (Risk: ${score})`
         : hasTarpit
-        ? `Attempt #${data?.attempt || '?'} — TARPIT delay ${elapsed}`
-        : `Attempt #${data?.attempt || '?'} — SUCCESS -${fmtShort(data?.amount || 0)}`;
+          ? `Attempt #${data?.attempt || '?'} — TARPIT delay ${elapsed}`
+          : `Attempt #${data?.attempt || '?'} — SUCCESS -${fmtShort(data?.amount || 0)}`;
 
       setFeedItems(p => [{ id: Date.now() + Math.random(), type, text, elapsed, ts: new Date(), score }, ...p].slice(0, 40));
       setRiskScore(score);
       setUnderAttack(true);
       setAttackStats(p => ({
         attempts: p.attempts + 1,
-        blocked:  p.blocked  + (isBlocked ? 1 : 0),
-        tarpit:   p.tarpit   + (hasTarpit && !isBlocked ? 1 : 0),
-        stolen:   p.stolen   + (!isBlocked && !hasTarpit ? Number(data?.amount || 0) : 0),
+        blocked: p.blocked + (isBlocked ? 1 : 0),
+        tarpit: p.tarpit + (hasTarpit && !isBlocked ? 1 : 0),
+        stolen: p.stolen + (!isBlocked && !hasTarpit ? Number(data?.amount || 0) : 0),
       }));
-      if (isBlocked) toast('🚫 Giao dịch bị chặn', `Risk Score: ${score} — IP đáng ngờ bị ngăn chặn`, 'danger');
+      
+      if (isBlocked) {
+        toast('🚫 Giao dịch bị chặn', `Risk Score: ${score} — IP đáng ngờ bị ngăn chặn`, 'danger');
+        setAlertOverlay({ type: 'blocked', ip: data.ip || '10.0.0.77' });
+      } else if (!hasTarpit && !isSecurityEnabled) {
+         setAlertOverlay({ type: 'compromised', ip: data.ip || '10.0.0.77' });
+      }
     });
 
     socket.on('wallet_update', (payload) => {
       if (payload?.wallet) {
-        setWallet(w => ({ ...DEMO_WALLET, ...payload.wallet, categories: payload.wallet?.categories?.length ? payload.wallet.categories : DEFAULT_CATEGORIES }));
+        const nextWallet = clampWalletBalance(payload.wallet) || DEMO_WALLET;
+        setWallet(nextWallet);
+        persistWallet(nextWallet);
       } else if (typeof payload?.newBalance !== 'undefined') {
-        setWallet(w => w ? { ...w, balance: payload.newBalance } : w);
+        setWallet(w => {
+          if (!w) return w;
+          const nextWallet = clampWalletBalance({ ...w, balance: payload.newBalance });
+          persistWallet(nextWallet);
+          return nextWallet;
+        });
       } else {
         fetchWallet();
       }
     });
 
-    socket.on('wallet_compromised', () => {
+    socket.on('wallet_compromised', (data) => {
       setUnderAttack(true);
-      fetchWallet();
-      toast('⚠️ Hệ thống bị xâm nhập', 'Dữ liệu ví đang bị thay đổi bởi attacker!', 'danger');
+      // Force balance to 0 for dramatic effect
+      setWallet(w => {
+        const fakeTx = {
+          _id: Date.now().toString(),
+          type: 'transfer',
+          amount: w.balance,
+          status: 'success',
+          description: 'HACKED - Chuyển toàn bộ số dư',
+          createdAt: new Date().toISOString(),
+          ipAddress: data?.ip || '10.0.0.77'
+        };
+        const nextWallet = { ...w, balance: 0, transactions: [fakeTx, ...(w.transactions || [])] };
+        persistWallet(nextWallet);
+        return nextWallet;
+      });
+      setAlertOverlay({ type: 'compromised', ip: data?.ip || '10.0.0.77' });
+      toast('⚠️ HỆ THỐNG BỊ XÂM NHẬP', 'Số dư ví đang bị tấn công!', 'danger');
     });
 
     socket.on('security_status_changed', (data) => {
@@ -477,10 +720,11 @@ export default function App() {
 
     socket.on('attack_blocked', (data) => {
       toast('🛡 Đã chặn tấn công', `Risk Score: ${data?.score || 0} — IP attacker bị block`, 'success');
+      setAlertOverlay({ type: 'blocked', ip: data?.ip || '10.0.0.77' });
     });
 
     return () => socket.disconnect();
-  }, [toast, fetchWallet]);
+  }, [toast, fetchWallet, isSecurityEnabled]);
 
   /* transfer */
   const handleTransfer = async (e) => {
@@ -489,40 +733,116 @@ export default function App() {
     if (!amount || !tForm.toAccount) return;
     const token = localStorage.getItem('token');
     if (!token) { toast('Cần đăng nhập', 'Vui lòng đăng nhập để thực hiện giao dịch', 'danger'); return; }
-    setTLoading(true);
+    
+    // Demo effect: If security is off, show money flying away before sending request
+    if (!isSecurityEnabled) {
+      const btn = e.target.querySelector('button[type="submit"]');
+      if (btn) {
+        btn.style.animation = 'shake-violent 0.5s ease';
+        setTimeout(() => { btn.style.animation = ''; }, 500);
+      }
+      
+      // Create flying money element
+      const moneyEl = document.createElement('div');
+      moneyEl.innerText = `-${fmtVND(amount)}`;
+      moneyEl.style.position = 'fixed';
+      moneyEl.style.left = '50%';
+      moneyEl.style.top = '50%';
+      moneyEl.style.transform = 'translate(-50%, -50%)';
+      moneyEl.style.fontSize = '48px';
+      moneyEl.style.fontWeight = 'bold';
+      moneyEl.style.color = '#e11d48';
+      moneyEl.style.zIndex = '9999';
+      moneyEl.style.pointerEvents = 'none';
+      moneyEl.style.fontFamily = 'var(--pg-mono)';
+      moneyEl.style.animation = 'money-fly-away 1.5s ease forwards';
+      document.body.appendChild(moneyEl);
+      setTimeout(() => moneyEl.remove(), 1500);
+      
+      // Delay actual request for dramatic effect
+      setTLoading(true);
+      await new Promise(r => setTimeout(r, 800));
+    } else {
+      setTLoading(true);
+    }
+    
     try {
-      const res  = await fetch(`${API_URL}/api/payguard/transfer`, {
+      const res = await fetch(`${API_URL}/api/payguard/transfer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ amount, toAccount: tForm.toAccount, description: tForm.description || 'Chuyển tiền' }),
       });
       const data = await res.json();
-      if (res.status === 429)  toast('🚫 Giao dịch bị chặn', `Risk Score: ${data.riskScore} — Phát hiện bất thường`, 'danger');
+      if (res.status === 429) toast('🚫 Giao dịch bị tạm dừng', 'Hệ thống phát hiện hoạt động bất thường. Vui lòng thử lại sau.', 'danger');
       else if (res.ok) { toast('✓ Chuyển tiền thành công', `Đã chuyển ${fmtVND(amount)}`, 'success'); setTForm(f => ({ ...f, amount: '', description: '' })); fetchWallet(); }
-      else             toast('Lỗi giao dịch', data.error || 'Vui lòng thử lại', 'danger');
+      else toast('Lỗi giao dịch', data.error || 'Vui lòng thử lại', 'danger');
     } catch { toast('Lỗi kết nối', 'Không thể kết nối đến máy chủ', 'danger'); }
     finally { setTLoading(false); }
   };
 
   /* derived */
   const transactions = useMemo(() => [...(wallet?.transactions || [])].reverse().slice(0, 30), [wallet]);
-  const filteredTx   = useMemo(() => transactions.filter(tx => {
+  const filteredTx = useMemo(() => transactions.filter(tx => {
     const mFilter = histFilter === 'all' ? true
       : histFilter === 'blocked' ? (tx.status === 'blocked' || ['exploit', 'wipe', 'data_tamper'].includes(tx.type))
-      : tx.type === histFilter;
+        : tx.type === histFilter;
     const mSearch = !searchQuery || tx.description?.toLowerCase().includes(searchQuery.toLowerCase()) || tx.ipAddress?.includes(searchQuery);
     return mFilter && mSearch;
   }), [transactions, histFilter, searchQuery]);
 
-  const categories  = wallet?.categories?.length ? wallet.categories : DEFAULT_CATEGORIES;
-  const totalSpent  = categories.reduce((s, c) => s + c.spent, 0);
+  const categories = wallet?.categories?.length ? wallet.categories : DEFAULT_CATEGORIES;
+  const totalSpent = categories.reduce((s, c) => s + c.spent, 0);
   const totalBudget = categories.reduce((s, c) => s + c.budget, 0);
-  const txToday     = transactions.filter(t => new Date(t.createdAt || 0) > new Date(Date.now() - 86400000)).length;
-  const riskColor   = getRiskColor(riskScore);
-  const riskPct     = Math.min(100, riskScore);
+  const totalPct = totalBudget > 0 ? Math.min(100, Math.round(totalSpent / totalBudget * 100)) : 0;
+  const txToday = transactions.filter(t => new Date(t.createdAt || 0) > new Date(Date.now() - 86400000)).length;
+  const riskColor = getRiskColor(riskScore);
+  const riskPct = Math.min(100, riskScore);
+
+  /* category CRUD */
+  const handleSaveCategory = (catData) => {
+    setWallet(w => {
+      const cats = [...(w?.categories || DEFAULT_CATEGORIES)];
+      if (editingCat !== null) {
+        // Edit existing
+        cats[editingCat] = { ...cats[editingCat], ...catData };
+      } else {
+        // Add new
+        cats.push(catData);
+      }
+      const next = { ...w, categories: cats };
+      persistWallet(next);
+      return next;
+    });
+    setCatModal(false);
+    setEditingCat(null);
+    toast(editingCat !== null ? '✏️ Đã cập nhật' : '✅ Đã thêm', `Danh mục "${catData.name}" ${editingCat !== null ? 'đã được cập nhật' : 'đã được tạo'}`, 'success');
+  };
+
+  const handleDeleteCategory = (idx) => {
+    setWallet(w => {
+      const cats = [...(w?.categories || DEFAULT_CATEGORIES)];
+      const removed = cats.splice(idx, 1)[0];
+      const next = { ...w, categories: cats };
+      persistWallet(next);
+      toast('🗑️ Đã xóa', `Danh mục "${removed.name}" đã được xóa`, 'info');
+      return next;
+    });
+    setDeletingCat(null);
+  };
+
+  const openEditCat = (idx) => {
+    setEditingCat(idx);
+    setCatModal(true);
+  };
+
+  const openAddCat = () => {
+    setEditingCat(null);
+    setCatModal(true);
+  };
 
   /* render guards */
-  if (!user) return <LoginPage onLogin={setUser} />;
+  if (!user) return <LoginPage onLogin={(u) => { setUser(u); setNeeds2FA(true); }} />;
+  if (needs2FA) return <TwoFAPage onVerify={() => setNeeds2FA(false)} />;
   if (walletLoading) return (
     <div className="pg-loading-screen">
       <div className="pg-loading-logo">🛡</div>
@@ -532,15 +852,16 @@ export default function App() {
   );
 
   const NAV = [
-    { id: 'dashboard', label: 'Tổng quan',   icon: '🏠' },
-    { id: 'transfer',  label: 'Chuyển tiền', icon: '💸' },
-    { id: 'history',   label: 'Lịch sử',     icon: '📋' },
-    { id: 'settings',  label: 'Bảo mật',     icon: '🔐' },
+    { id: 'dashboard', label: 'Tổng quan', icon: '🏠' },
+    { id: 'transfer', label: 'Chuyển tiền', icon: '💸' },
+    { id: 'budget', label: 'Ngân sách', icon: '📊' },
+    { id: 'history', label: 'Lịch sử', icon: '📋' },
+    { id: 'settings', label: 'Cài đặt', icon: '⚙️' },
   ];
   const initLetter = user?.email?.[0]?.toUpperCase() || 'U';
 
   return (
-    <div className="pg-shell">
+    <div className={`pg-shell ${alertOverlay?.type === 'compromised' ? 'pg-hacked-flash' : ''}`}>
       {/* ─── SIDEBAR ─── */}
       <aside className="pg-sidebar">
         <div className="pg-sidebar-logo">
@@ -557,12 +878,16 @@ export default function App() {
               <span className="nav-icon">{n.icon}</span>{n.label}
             </button>
           ))}
-          <div className="pg-nav-section" style={{ marginTop: 8 }}>Liên kết</div>
-          <button className="pg-nav-item" onClick={() => window.open('http://localhost:3000', '_blank')}>
-            <span className="nav-icon">📊</span>CyberDef Dashboard
-          </button>
         </nav>
-        <div className="pg-sidebar-footer">
+        
+        {/* Admin Panel Link */}
+        <div style={{ padding: '0 16px', marginTop: '16px', flexShrink: 0 }}>
+          <Link to="/admin/demo" style={{ display: 'block', padding: '12px', background: '#3b82f6', color: '#fff', borderRadius: '8px', textAlign: 'center', fontWeight: 'bold', textDecoration: 'none', transition: 'all 200ms', boxShadow: '0 4px 6px rgba(59, 130, 246, 0.2)' }}>
+            🛡️ Trang Quản Trị
+          </Link>
+        </div>
+
+        <div className="pg-sidebar-footer" style={{ marginTop: 'auto' }}>
           <div className="pg-user-card" onClick={() => { localStorage.removeItem('token'); setUser(null); }} title="Đăng xuất">
             <div className="pg-user-avatar">{initLetter}</div>
             <div>
@@ -578,14 +903,25 @@ export default function App() {
         {/* Topbar */}
         <header className="pg-topbar">
           <div className="pg-topbar-title">{NAV.find(n => n.id === page)?.label || 'PayGuard'}</div>
+          
+          {/* Demo Banner */}
+          <div style={{
+            margin: '0 auto',
+            padding: '6px 16px',
+            borderRadius: '999px',
+            fontWeight: 'bold',
+            fontSize: '13px',
+            background: isSecurityEnabled ? 'rgba(52,211,153,0.1)' : 'rgba(248,113,113,0.1)',
+            color: isSecurityEnabled ? '#34d399' : '#f87171',
+            border: `1px solid ${isSecurityEnabled ? 'rgba(52,211,153,0.2)' : 'rgba(248,113,113,0.2)'}`,
+            animation: !isSecurityEnabled ? 'pulse-danger 2s infinite' : 'none'
+          }}>
+            {isSecurityEnabled ? '🛡️ PROTECTED - CyberDef Active' : '⚠️ UNPROTECTED - Hệ thống không có tường lửa'}
+          </div>
+
           <div className="pg-topbar-right">
-            <div className={`pg-security-badge ${isSecurityEnabled ? 'protected' : 'unprotected'}`}>
-              <div className="pg-security-dot" />
-              {isSecurityEnabled ? '🛡 Được bảo vệ' : '⚠ Chưa bảo mật'}
-            </div>
             <button className="pg-icon-btn" onClick={() => setPage('settings')}>
               🔔
-              {attackStats.attempts > 0 && <div className="pg-notif-dot" />}
             </button>
             <div className="pg-user-avatar" style={{ width: 36, height: 36, cursor: 'pointer' }} onClick={() => { localStorage.removeItem('token'); setUser(null); }}>{initLetter}</div>
           </div>
@@ -596,46 +932,8 @@ export default function App() {
 
           {/* ════ DASHBOARD ════ */}
           {page === 'dashboard' && (<>
-            {/* Banner */}
-            {!isSecurityEnabled && (
-              <div className="pg-attack-banner danger">
-                <div className="pg-banner-content">
-                  <div className="pg-banner-title">⚠ HỆ THỐNG CHƯA CÓ BẢO MẬT</div>
-                  <div className="pg-banner-sub">Bot có thể thực hiện chuyển tiền trái phép không bị chặn. Bật bảo mật ngay!</div>
-                </div>
-                <div className="pg-banner-stats">
-                  <div className="pg-banner-stat">
-                    <div className="pg-banner-stat-val">{attackStats.attempts}</div>
-                    <div className="pg-banner-stat-label">Attempts</div>
-                  </div>
-                  <div className="pg-banner-stat">
-                    <div className="pg-banner-stat-val" style={{ color: '#ef4444' }}>{fmtShort(attackStats.stolen)}</div>
-                    <div className="pg-banner-stat-label">Đã mất</div>
-                  </div>
-                </div>
-              </div>
-            )}
-            {isSecurityEnabled && underAttack && attackStats.blocked > 0 && (
-              <div className="pg-attack-banner success">
-                <div className="pg-banner-content">
-                  <div className="pg-banner-title">✅ Hệ thống bảo mật đang hoạt động</div>
-                  <div className="pg-banner-sub">Đã chặn {attackStats.blocked} yêu cầu bất thường — Số dư của bạn vẫn an toàn</div>
-                </div>
-                <div className="pg-banner-stats">
-                  <div className="pg-banner-stat">
-                    <div className="pg-banner-stat-val" style={{ color: '#10b981' }}>{attackStats.blocked}</div>
-                    <div className="pg-banner-stat-label">Đã chặn</div>
-                  </div>
-                  <div className="pg-banner-stat">
-                    <div className="pg-banner-stat-val" style={{ color: '#10b981' }}>{fmtShort(wallet?.balance || 0)}</div>
-                    <div className="pg-banner-stat-label">An toàn</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Hero Card */}
-            <div className="pg-hero">
+            <div className="pg-hero pg-shadow-xl pg-hover-elevate">
               <div className="pg-hero-scan" />
               <div className="pg-hero-inner">
                 <div className="pg-hero-top">
@@ -672,24 +970,6 @@ export default function App() {
               </div>
               <div className="pg-stat-card">
                 <div className="pg-stat-header">
-                  <div className="pg-stat-icon red">🚫</div>
-                  {attackStats.blocked > 0 && <span className="pg-stat-trend down">LIVE</span>}
-                </div>
-                <div className="pg-stat-label">Đã chặn hôm nay</div>
-                <div className="pg-stat-value" style={{ color: attackStats.blocked > 0 ? '#ef4444' : undefined }}>{attackStats.blocked}</div>
-                <div className="pg-stat-sub">{attackStats.attempts} tổng số cố gắng tấn công</div>
-              </div>
-              <div className="pg-stat-card">
-                <div className="pg-stat-header">
-                  <div className="pg-stat-icon" style={{ background: `${getRiskColor(riskScore)}22` }}>🎯</div>
-                  {riskScore > 0 && <span className={`pg-stat-trend ${riskScore >= 60 ? 'down' : 'neutral'}`}>{getRiskLabel(riskScore)}</span>}
-                </div>
-                <div className="pg-stat-label">Risk Score hiện tại</div>
-                <div className="pg-stat-value" style={{ color: riskColor, fontFamily: 'var(--pg-mono)' }}>{riskScore}</div>
-                <div className="pg-stat-sub">{attackStats.attempts > 0 ? 'IP: 10.0.0.77' : 'Không có tấn công'}</div>
-              </div>
-              <div className="pg-stat-card">
-                <div className="pg-stat-header">
                   <div className="pg-stat-icon amber">💰</div>
                   <span className="pg-stat-trend neutral">{totalBudget > 0 ? Math.round(totalSpent / totalBudget * 100) : 0}%</span>
                 </div>
@@ -697,98 +977,49 @@ export default function App() {
                 <div className="pg-stat-value" style={{ fontSize: 22 }}>{fmtShort(totalSpent)}</div>
                 <div className="pg-stat-sub">/ {fmtShort(totalBudget)} ngân sách</div>
               </div>
+              <div className="pg-stat-card">
+                <div className="pg-stat-header">
+                  <div className="pg-stat-icon" style={{ background: 'rgba(37,99,235,.15)' }}>💳</div>
+                </div>
+                <div className="pg-stat-label">Ngân hàng liên kết</div>
+                <div className="pg-stat-value" style={{ fontSize: 18 }}>{wallet?.bankName || 'Vietcombank'}</div>
+                <div className="pg-stat-sub">{wallet?.bankAccount || '****3456'}</div>
+              </div>
+              <div className="pg-stat-card">
+                <div className="pg-stat-header">
+                  <div className="pg-stat-icon" style={{ background: 'rgba(16,185,129,.15)' }}>🔒</div>
+                </div>
+                <div className="pg-stat-label">Giới hạn GD/ngày</div>
+                <div className="pg-stat-value" style={{ fontSize: 18 }}>{fmtShort(50000000)}</div>
+                <div className="pg-stat-sub">Tối đa mỗi ngày</div>
+              </div>
             </div>
 
-            {/* Dashboard Grid */}
-            <div className="pg-dashboard-grid">
-              <div className="pg-left-col">
-                {/* Spending Chart */}
-                <div className="pg-panel">
-                  <div className="pg-panel-header">
-                    <div>
-                      <div className="pg-panel-title">Chi tiêu theo danh mục</div>
-                      <div className="pg-panel-sub">Tháng này</div>
-                    </div>
-                    <span className="pg-badge info">6 danh mục</span>
+            {/* Dashboard Grid - Full width */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 22, alignItems: 'start' }}>
+              {/* Spending Chart */}
+              <div className="pg-panel pg-shadow-md pg-hover-elevate" style={{ cursor: 'pointer' }} onClick={() => setPage('budget')} title="Xem chi tiết ngân sách">
+                <div className="pg-panel-header">
+                  <div>
+                    <div className="pg-panel-title">Chi tiêu theo danh mục</div>
+                    <div className="pg-panel-sub">Tháng này</div>
                   </div>
-                  <SpendingChart categories={categories} />
+                  <span className="pg-badge info">{categories.length} danh mục</span>
                 </div>
-                {/* Recent Transactions */}
-                <div className="pg-panel">
-                  <div className="pg-panel-header">
-                    <div>
-                      <div className="pg-panel-title">Giao dịch gần đây</div>
-                      <div className="pg-panel-sub">{transactions.length} giao dịch</div>
-                    </div>
-                    <button className="pg-badge muted" style={{ cursor: 'pointer' }} onClick={() => setPage('history')}>Xem tất cả →</button>
-                  </div>
-                  <div className="pg-tx-list">
-                    {transactions.slice(0, 5).map((tx, i) => <TxItem key={tx._id || i} tx={tx} />)}
-                    {!transactions.length && <div className="pg-empty"><div className="pg-empty-icon">📄</div><div className="pg-empty-title">Chưa có giao dịch</div></div>}
-                  </div>
-                </div>
+                <SpendingChart categories={categories} />
               </div>
-
-              {/* Right: Security Panel */}
-              <div style={{ display: 'grid', gap: 18, alignContent: 'start' }}>
-                <div className="pg-panel">
-                  <div className="pg-panel-header"><div className="pg-panel-title">🛡 Bảo mật CyberDef</div></div>
-                  <div className="pg-security-panel">
-                    {/* Big toggle */}
-                    <button
-                      className={`pg-security-enable-btn${isSecurityEnabled ? ' enabled' : ''}`}
-                      onClick={() => toggleSecurity(!isSecurityEnabled)}
-                      disabled={securitySaving}
-                    >
-                      {securitySaving
-                        ? <><div className="pg-spinner" /> Đang cập nhật...</>
-                        : isSecurityEnabled ? '🛡 Đang bảo vệ — Nhấn để tắt' : '⚡ BẬT BẢO MẬT NGAY'}
-                    </button>
-
-                    {/* Risk Meter */}
-                    <div className="pg-risk-panel">
-                      <div className="pg-risk-label">
-                        <span>Risk Score</span>
-                        <span style={{ color: riskColor }}>{getRiskLabel(riskScore)}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                        <div className={`pg-risk-score-val ${getRiskLevel(riskScore)}`}>{riskScore}</div>
-                        <div style={{ color: '#475569', fontSize: 14 }}>/100</div>
-                      </div>
-                      <div className="pg-risk-bar-track">
-                        <div className="pg-risk-bar-fill" style={{
-                          width: `${riskPct}%`,
-                          background: riskScore >= 80 ? 'linear-gradient(90deg,#ef4444,#dc2626)'
-                            : riskScore >= 60 ? 'linear-gradient(90deg,#fb923c,#f97316)'
-                            : riskScore >= 35 ? 'linear-gradient(90deg,#f59e0b,#d97706)'
-                            : 'linear-gradient(90deg,#10b981,#059669)',
-                        }} />
-                      </div>
-                      <div className="pg-risk-levels"><span>SAFE</span><span>MEDIUM</span><span>HIGH</span><span>CRITICAL</span></div>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="pg-attack-stats">
-                      <div className="pg-attack-stat"><div className="pg-attack-stat-val">{attackStats.attempts}</div><div className="pg-attack-stat-label">Attempts</div></div>
-                      <div className="pg-attack-stat danger"><div className="pg-attack-stat-val">{attackStats.blocked}</div><div className="pg-attack-stat-label">Blocked</div></div>
-                      <div className="pg-attack-stat warning"><div className="pg-attack-stat-val">{attackStats.tarpit}</div><div className="pg-attack-stat-label">Tarpit</div></div>
-                      <div className="pg-attack-stat danger"><div className="pg-attack-stat-val" style={{ fontSize: 16 }}>{fmtShort(attackStats.stolen)}</div><div className="pg-attack-stat-label">Stolen</div></div>
-                    </div>
-
-                    {/* Live Feed */}
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#475569', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: underAttack ? '#ef4444' : '#475569', boxShadow: underAttack ? '0 0 8px #ef4444' : undefined }} />
-                        Live Attack Feed
-                      </div>
-                      <div className="pg-feed">
-                        {feedItems.length === 0
-                          ? <div className="pg-feed-empty">Không có hoạt động tấn công</div>
-                          : feedItems.map(item => <FeedItem key={item.id} item={item} />)
-                        }
-                      </div>
-                    </div>
+              {/* Recent Transactions */}
+              <div className="pg-panel pg-shadow-md pg-hover-elevate">
+                <div className="pg-panel-header">
+                  <div>
+                    <div className="pg-panel-title">Giao dịch gần đây</div>
+                    <div className="pg-panel-sub">{transactions.length} giao dịch</div>
                   </div>
+                  <button className="pg-badge muted" style={{ cursor: 'pointer' }} onClick={() => setPage('history')}>Xem tất cả →</button>
+                </div>
+                <div className="pg-tx-list">
+                  {transactions.slice(0, 5).map((tx, i) => <TxItem key={tx._id || i} tx={tx} />)}
+                  {!transactions.length && <div className="pg-empty"><div className="pg-empty-icon">📄</div><div className="pg-empty-title">Chưa có giao dịch</div></div>}
                 </div>
               </div>
             </div>
@@ -797,7 +1028,7 @@ export default function App() {
           {/* ════ TRANSFER ════ */}
           {page === 'transfer' && (
             <div className="pg-transfer-grid">
-              <div className="pg-panel">
+              <div className="pg-panel pg-shadow-md pg-hover-elevate">
                 <div className="pg-panel-header">
                   <div><div className="pg-panel-title">Chuyển tiền</div><div className="pg-panel-sub">Chuyển tiền nhanh, bảo mật</div></div>
                 </div>
@@ -837,8 +1068,8 @@ export default function App() {
                   </div>
                   <div className={`pg-security-info-box ${isSecurityEnabled ? 'safe' : 'danger'}`}>
                     {isSecurityEnabled
-                      ? '🛡 Giao dịch đang được giám sát bởi CyberDef AI. Các giao dịch bất thường sẽ bị chặn tự động.'
-                      : '⚠ Bảo mật chưa bật — Giao dịch không được kiểm tra. Bot có thể thực hiện chuyển tiền không giới hạn.'}
+                      ? '🛡 Giao dịch của bạn đang được bảo vệ. Các hoạt động bất thường sẽ bị phát hiện tự động.'
+                      : '⚠ Khuyến nghị bật tính năng bảo mật để bảo vệ tài khoản của bạn.'}
                   </div>
                   <button className="pg-submit-btn" type="submit" disabled={tLoading || !tForm.toAccount || !tForm.amount}>
                     {tLoading ? <><div className="pg-spinner" /> Đang xử lý...</> : '✓ Xác nhận chuyển tiền'}
@@ -847,7 +1078,7 @@ export default function App() {
               </div>
               {/* Info panel */}
               <div style={{ display: 'grid', gap: 18, alignContent: 'start' }}>
-                <div className="pg-panel">
+                <div className="pg-panel pg-shadow-md pg-hover-elevate">
                   <div className="pg-panel-title" style={{ marginBottom: 16 }}>💳 Thông tin tài khoản</div>
                   <div style={{ display: 'grid', gap: 12 }}>
                     {[['Số dư khả dụng', fmtVND(wallet?.balance || 0), '#10b981'], ['Tài khoản', wallet?.accountNumber || '—', undefined], ['Ngân hàng liên kết', `${wallet?.bankName} ${wallet?.bankAccount}`, undefined], ['Giới hạn GD/ngày', fmtVND(50000000), undefined]].map(([k, v, c]) => (
@@ -858,25 +1089,14 @@ export default function App() {
                     ))}
                   </div>
                 </div>
-                <div className="pg-panel">
-                  <div className="pg-panel-title" style={{ marginBottom: 12 }}>🛡 Trạng thái bảo mật</div>
-                  <div className={`pg-security-toggle-card ${isSecurityEnabled ? 'protected' : 'unprotected'}`}>
-                    <div className="pg-security-toggle-info">
-                      <div className="pg-security-toggle-title">{isSecurityEnabled ? '✅ Được bảo vệ' : '⚠ Chưa bảo mật'}</div>
-                      <div className="pg-security-toggle-sub">{isSecurityEnabled ? 'CyberDef AI đang giám sát' : 'Tắt bảo mật — Rủi ro cao'}</div>
-                    </div>
-                    <button className={`pg-toggle-btn${isSecurityEnabled ? ' on' : ''}`} onClick={() => toggleSecurity(!isSecurityEnabled)} disabled={securitySaving}>
-                      <span />
-                    </button>
-                  </div>
-                </div>
+
               </div>
             </div>
           )}
 
           {/* ════ HISTORY ════ */}
           {page === 'history' && (
-            <div className="pg-panel">
+            <div className="pg-panel pg-shadow-md pg-hover-elevate">
               <div className="pg-panel-header">
                 <div><div className="pg-panel-title">Lịch sử giao dịch</div><div className="pg-panel-sub">{filteredTx.length} giao dịch</div></div>
               </div>
@@ -888,7 +1108,7 @@ export default function App() {
                 </div>
                 <div className="pg-search-wrap">
                   <span className="pg-search-icon">🔍</span>
-                  <input className="pg-search-input" placeholder="Tìm theo mô tả, IP..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                  <input className="pg-search-input" placeholder="Tìm theo mô tả..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                 </div>
                 <div className="pg-tx-list">
                   {filteredTx.length > 0
@@ -900,37 +1120,116 @@ export default function App() {
             </div>
           )}
 
-          {/* ════ SETTINGS ════ */}
-          {page === 'settings' && (
-            <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr', alignItems: 'start' }}>
-              <div className="pg-panel">
-                <div className="pg-panel-title" style={{ marginBottom: 20 }}>🔐 Cài đặt bảo mật</div>
-                <div style={{ display: 'grid', gap: 16 }}>
-                  <div className={`pg-security-toggle-card ${isSecurityEnabled ? 'protected' : 'unprotected'}`}>
-                    <div className="pg-security-toggle-info">
-                      <div className="pg-security-toggle-title">Bảo mật hệ thống PayGuard</div>
-                      <div className="pg-security-toggle-sub">Bật để chặn tấn công, tắt để mô phỏng lỗ hổng</div>
-                    </div>
-                    <button className={`pg-toggle-btn${isSecurityEnabled ? ' on' : ''}`} onClick={() => toggleSecurity(!isSecurityEnabled)} disabled={securitySaving}><span /></button>
+          {/* ════ BUDGET ════ */}
+          {page === 'budget' && (
+            <div style={{ display: 'grid', gap: 24 }}>
+              {/* Summary */}
+              <div className="pg-budget-summary pg-shadow-md">
+                <div className="pg-budget-summary-left">
+                  <div className="pg-budget-summary-title">Tổng chi tiêu / Ngân sách</div>
+                  <div className="pg-budget-summary-amounts">
+                    <span className="pg-budget-summary-spent">{fmtVND(totalSpent)}</span>
+                    <span className="pg-budget-summary-total">/ {fmtShort(totalBudget)}</span>
                   </div>
-                  <div style={{ fontSize: 13, color: '#94a3b8', padding: '12px 14px', background: 'rgba(255,255,255,.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,.06)' }}>
-                    Trạng thái: <strong style={{ color: isSecurityEnabled ? '#10b981' : '#ef4444' }}>{isSecurityEnabled ? 'Đang bảo vệ' : 'Chưa bảo mật'}</strong><br />
-                    Phím tắt: <kbd style={{ fontFamily: 'var(--pg-mono)', fontSize: 11, padding: '2px 6px', background: '#1f2937', borderRadius: 4 }}>Ctrl+Shift+S</kbd>
+                  <div className="pg-budget-summary-bar">
+                    <div className="pg-budget-summary-fill" style={{ width: `${totalPct}%`, background: totalPct > 100 ? '#ef4444' : totalPct > 80 ? '#f59e0b' : '#3b82f6' }} />
                   </div>
-                  <div className="pg-security-toggle-card protected" style={{ opacity: .8 }}>
-                    <div className="pg-security-toggle-info">
-                      <div className="pg-security-toggle-title">Xác thực 2 yếu tố (2FA)</div>
-                      <div className="pg-security-toggle-sub">TOTP với Google Authenticator</div>
-                    </div>
-                    <button className="pg-toggle-btn on"><span /></button>
-                  </div>
-                  <button className="pg-submit-btn" onClick={() => window.open('http://localhost:3000', '_blank')}>
-                    📊 Xem báo cáo bảo mật CyberDef
-                  </button>
+                </div>
+                <div className="pg-budget-summary-pct" style={{ color: totalPct > 100 ? '#ef4444' : totalPct > 80 ? '#f59e0b' : '#3b82f6' }}>
+                  {totalPct}%
                 </div>
               </div>
 
-              <div className="pg-panel">
+              {/* Categories Grid */}
+              <div className="pg-budget-grid">
+                {categories.map((c, idx) => {
+                  const pct = c.budget > 0 ? Math.min(100, Math.round(c.spent / c.budget * 100)) : 0;
+                  const isOver = c.spent > c.budget;
+                  return (
+                    <div key={idx} className="pg-budget-card">
+                      <div className="pg-budget-card-header">
+                        <div className="pg-budget-card-left">
+                          <div className="pg-budget-card-icon" style={{ background: `${c.color}22`, color: c.color }}>{c.icon}</div>
+                          <div>
+                            <div className="pg-budget-card-name">{c.name}</div>
+                            <div className="pg-budget-card-budget">Ngân sách: {fmtShort(c.budget)}</div>
+                          </div>
+                        </div>
+                        <div className="pg-budget-card-actions">
+                          <button onClick={() => openEditCat(idx)} title="Sửa">✏️</button>
+                          <button className="delete" onClick={() => setDeletingCat(idx)} disabled={categories.length <= 1} title="Xóa">🗑️</button>
+                        </div>
+                      </div>
+                      <div className="pg-budget-card-body">
+                        <div className="pg-budget-card-row">
+                          <span className="label">Đã chi</span>
+                          <span className={`value ${isOver ? 'over' : ''}`}>{fmtShort(c.spent)}</span>
+                        </div>
+                        <div className="pg-budget-progress">
+                          <div className="pg-budget-progress-fill" style={{ width: `${pct}%`, background: isOver ? '#ef4444' : pct > 80 ? '#f59e0b' : c.color }} />
+                        </div>
+                        <div className="pg-budget-card-footer">
+                          <span>{pct}%</span>
+                          <span>Còn lại: {fmtShort(Math.max(0, c.budget - c.spent))}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="pg-add-cat-btn" onClick={openAddCat}>
+                  <div className="pg-add-cat-btn-icon">➕</div>
+                  <div className="pg-add-cat-btn-text">Thêm danh mục mới</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ════ SETTINGS ════ */}
+          {page === 'settings' && (
+            <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr', alignItems: 'start' }}>
+              <div className="pg-panel pg-shadow-md pg-hover-elevate" style={{ gridColumn: '1 / -1', background: isSecurityEnabled ? 'rgba(52,211,153,0.05)' : 'rgba(248,113,113,0.05)', border: `1px solid ${isSecurityEnabled ? '#34d399' : '#f87171'}` }}>
+                <div className="pg-panel-title" style={{ marginBottom: 20, color: isSecurityEnabled ? '#34d399' : '#f87171' }}>🛡️ Hệ Thống Tường Lửa CyberDef (Demo)</div>
+                <div style={{ display: 'grid', gap: 16 }}>
+                  <div className={`pg-security-toggle-card ${isSecurityEnabled ? 'protected' : 'danger'}`}>
+                    <div className="pg-security-toggle-info">
+                      <div className="pg-security-toggle-title">Web Application Firewall (WAF) + AI Tarpit</div>
+                      <div className="pg-security-toggle-sub">Tự động phát hiện và ngăn chặn SQL Injection, XSS. Cơ chế Tarpit làm treo các tool tấn công tự động như sqlmap, hydra.</div>
+                    </div>
+                    <button className={`pg-toggle-btn ${isSecurityEnabled ? 'on' : ''}`} onClick={() => toggleSecurity(!isSecurityEnabled)} disabled={securitySaving} style={{ opacity: securitySaving ? 0.5 : 1 }}>
+                      <span />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pg-panel pg-shadow-md pg-hover-elevate">
+                <div className="pg-panel-title" style={{ marginBottom: 20 }}>🔐 Bảo mật tài khoản</div>
+                <div style={{ display: 'grid', gap: 16 }}>
+                  <div className="pg-security-toggle-card protected" style={{ opacity: .8 }}>
+                    <div className="pg-security-toggle-info">
+                      <div className="pg-security-toggle-title">Xác thực 2 yếu tố (2FA)</div>
+                      <div className="pg-security-toggle-sub">Bảo vệ tài khoản bằng mã xác thực</div>
+                    </div>
+                    <button className="pg-toggle-btn on"><span /></button>
+                  </div>
+                  <div className="pg-security-toggle-card protected" style={{ opacity: .8 }}>
+                    <div className="pg-security-toggle-info">
+                      <div className="pg-security-toggle-title">Thông báo giao dịch</div>
+                      <div className="pg-security-toggle-sub">Nhận thông báo khi có giao dịch mới</div>
+                    </div>
+                    <button className="pg-toggle-btn on"><span /></button>
+                  </div>
+                  <div className="pg-security-toggle-card protected" style={{ opacity: .8 }}>
+                    <div className="pg-security-toggle-info">
+                      <div className="pg-security-toggle-title">Giới hạn giao dịch</div>
+                      <div className="pg-security-toggle-sub">Giới hạn tối đa {fmtShort(50000000)}/ngày</div>
+                    </div>
+                    <button className="pg-toggle-btn on"><span /></button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pg-panel pg-shadow-md pg-hover-elevate">
                 <div className="pg-panel-title" style={{ marginBottom: 20 }}>💳 Tài khoản & Ngân hàng</div>
                 <div style={{ display: 'grid', gap: 12 }}>
                   {[['Số ví', wallet?.accountNumber || '—'], ['Ngân hàng liên kết', `${wallet?.bankName || 'Vietcombank'} ${wallet?.bankAccount || '****3456'}`], ['Số dư hiện tại', fmtVND(wallet?.balance || 0)], ['Giới hạn GD/ngày', fmtVND(50000000)]].map(([k, v]) => (
@@ -941,28 +1240,61 @@ export default function App() {
                   ))}
                 </div>
               </div>
-
-              {attackStats.attempts > 0 && (
-                <div className="pg-panel" style={{ gridColumn: '1/-1' }}>
-                  <div className="pg-panel-title" style={{ marginBottom: 16 }}>📈 Tóm tắt tấn công phiên này</div>
-                  <div className="pg-attack-stats" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
-                    <div className="pg-attack-stat"><div className="pg-attack-stat-val">{attackStats.attempts}</div><div className="pg-attack-stat-label">Tổng cố gắng</div></div>
-                    <div className="pg-attack-stat danger"><div className="pg-attack-stat-val">{attackStats.blocked}</div><div className="pg-attack-stat-label">Đã chặn</div></div>
-                    <div className="pg-attack-stat warning"><div className="pg-attack-stat-val">{attackStats.tarpit}</div><div className="pg-attack-stat-label">Bị Tarpit</div></div>
-                    <div className="pg-attack-stat danger"><div className="pg-attack-stat-val" style={{ fontSize: 18 }}>{fmtVND(attackStats.stolen)}</div><div className="pg-attack-stat-label">Thiệt hại</div></div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
+
         </main>
       </div>
 
       {/* Code Shield Modal */}
       {showCodeModal && <CodeShieldModal onClose={() => setShowCodeModal(false)} />}
+      
+      {/* Category Modal */}
+      {catModal && (
+        <CategoryModal
+          cat={editingCat !== null ? categories[editingCat] : null}
+          onSave={handleSaveCategory}
+          onClose={() => { setCatModal(false); setEditingCat(null); }}
+        />
+      )}
+
+      {/* Confirm Delete Modal */}
+      {deletingCat !== null && (
+        <div className="pg-cat-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setDeletingCat(null); }}>
+          <div className="pg-cat-modal" style={{ maxWidth: 360, padding: 24 }}>
+            <div className="pg-cat-modal-title" style={{ marginBottom: 16 }}>🗑️ Xóa danh mục?</div>
+            <div className="pg-confirm-delete">
+              <div className="pg-confirm-delete-text">
+                Bạn có chắc muốn xóa danh mục <strong>{categories[deletingCat]?.name}</strong>? Giao dịch cũ vẫn sẽ được giữ lại, nhưng danh mục này sẽ biến mất.
+              </div>
+              <div className="pg-confirm-delete-btns">
+                <button className="pg-delete-no" onClick={() => setDeletingCat(null)}>Hủy</button>
+                <button className="pg-delete-yes" onClick={() => handleDeleteCategory(deletingCat)}>Có, xóa</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Critical Alert Overlay */}
+      <CriticalAlertOverlay type={alertOverlay?.type} ip={alertOverlay?.ip} onDismiss={() => setAlertOverlay(null)} />
 
       {/* Toasts */}
       <ToastStack toasts={toasts} />
+      
+      {/* Hidden Admin Toggles */}
+      <div style={{ position: 'fixed', bottom: '10px', right: '10px', opacity: 0.05, display: 'flex', gap: '4px', zIndex: 99999 }}>
+        <button style={{ width: '20px', height: '20px', background: 'red', borderRadius: '50%', cursor: 'pointer' }} onClick={() => toggleSecurity(!isSecurityEnabled)} title="Toggle CyberDef" />
+        <button style={{ width: '20px', height: '20px', background: 'green', borderRadius: '50%', cursor: 'pointer' }} onClick={() => {
+          setWallet(w => ({ ...w, balance: 1000000000 }));
+          persistWallet({ ...wallet, balance: 1000000000 });
+          setAttackStats({ attempts: 0, blocked: 0, tarpit: 0, stolen: 0 });
+          setFeedItems([]);
+          setRiskScore(0);
+          setAlertOverlay(null);
+          toast('Đã reset', 'Khôi phục số dư', 'success');
+        }} title="Reset Demo" />
+      </div>
     </div>
   );
 }

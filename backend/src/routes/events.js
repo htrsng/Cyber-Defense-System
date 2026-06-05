@@ -18,6 +18,10 @@ router.get('/', async (req, res) => {
             filter.type = type;
         }
 
+        if (req.query.websiteId) {
+            filter.websiteId = req.query.websiteId;
+        }
+
         const events = await SecurityEvent.find(filter)
             .sort({ createdAt: -1 })
             .limit(100)

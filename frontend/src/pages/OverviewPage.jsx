@@ -83,7 +83,7 @@ export default function OverviewPage({ liveAlerts, recentLogs }) {
         setExportLoading(true);
         try {
             const response = await fetch(
-                `http://localhost:5000/api/reports/security?hours=${exportRange}`,
+                `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/reports/security?hours=${exportRange}`,
                 { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
             );
             if (!response.ok) throw new Error('Failed to generate report');

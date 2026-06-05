@@ -9,6 +9,12 @@ export const api = axios.create({ baseURL: BASE_URL });
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
+
+    const websiteId = localStorage.getItem('selectedWebsiteId');
+    if (websiteId) {
+        config.params = { ...config.params, websiteId };
+    }
+    
     return config;
 });
 

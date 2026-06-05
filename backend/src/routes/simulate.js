@@ -4,18 +4,19 @@ const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
-// All simulate endpoints require auth + admin role
-router.post('/brute-force', authMiddleware, adminMiddleware, (req, res) => {
+// Simulate endpoints are made public for the Live Demo Attacker Console.
+// Rate limiting is handled globally.
+router.post('/brute-force', (req, res) => {
     const io = req.app.get('io');
     return simulateController.bruteForce(req, res, io);
 });
 
-router.post('/sqli', authMiddleware, adminMiddleware, (req, res) => {
+router.post('/sqli', (req, res) => {
     const io = req.app.get('io');
     return simulateController.sqli(req, res, io);
 });
 
-router.post('/honeypot', authMiddleware, adminMiddleware, (req, res) => {
+router.post('/honeypot', (req, res) => {
     const io = req.app.get('io');
     return simulateController.honeypot(req, res, io);
 });

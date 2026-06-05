@@ -29,6 +29,7 @@ async function createLog({
     eventType,
     ipAddress,
     userId = null,
+    websiteId = null,
     userAgent = '',
     endpoint = '',
     method = '',
@@ -63,6 +64,7 @@ async function createLog({
         eventType,
         ipAddress: normalizedIp,
         userId,
+        websiteId,
         userAgent,
         endpoint,
         method,
@@ -76,6 +78,7 @@ async function createLog({
     io?.emit('activity_log', {
         _id: log._id,
         eventType,
+        websiteId,
         ipAddress: normalizedIp,
         severity: finalSeverity,
         riskScore: score,
@@ -98,32 +101,43 @@ async function createLog({
  * Cập nhật Redis counters — dùng cho rate limiting & risk scoring
  */
 async function updateRedisCounters(eventType, ip) {
-    const pipeline = redis.pipeline();
-    const TTL_10M = 600;  // 10 phút
-    const TTL_1H = 3600; // 1 giờ
+    try {
+        if (!redis || !redis.status || redis.status === 'end' || redis.status === 'close') return;
 
-    if (eventType === 'LOGIN_FAILED') {
-        pipeline.incr(`failed_login:${ip}`);
-        pipeline.expire(`failed_login:${ip}`, TTL_10M);
+        const pipeline = redis.pipeline();
+        const TTL_10M = 600;  // 10 phút
+        const TTL_1H = 3600; // 1 giờ
+
+        if (eventType === 'LOGIN_FAILED') {
+            pipeline.incr(`failed_login:${ip}`);
+            pipeline.expire(`failed_login:${ip}`, TTL_10M);
+        }
+
+        if (eventType === 'RATE_LIMIT_HIT') {
+            pipeline.incr(`rate_limit_hit:${ip}`);
+            pipeline.expire(`rate_limit_hit:${ip}`, TTL_1H);
+        }
+
+        // Tổng request counter
+        pipeline.incr(`req_count:${ip}`);
+        pipeline.expire(`req_count:${ip}`, TTL_1H);
+
+        await pipeline.exec().catch(() => { });
+    } catch (err) {
+        console.warn('⚠️ Redis unavailable — skipping updateRedisCounters:', err.message || err);
     }
-
-    if (eventType === 'RATE_LIMIT_HIT') {
-        pipeline.incr(`rate_limit_hit:${ip}`);
-        pipeline.expire(`rate_limit_hit:${ip}`, TTL_1H);
-    }
-
-    // Tổng request counter
-    pipeline.incr(`req_count:${ip}`);
-    pipeline.expire(`req_count:${ip}`, TTL_1H);
-
-    await pipeline.exec();
 }
 
 /**
  * Reset failed login counter khi đăng nhập thành công
  */
 async function resetFailedLoginCounter(ip) {
-    await redis.del(`failed_login:${ip}`);
+    try {
+        if (!redis || !redis.status || redis.status === 'end' || redis.status === 'close') return;
+        await redis.del(`failed_login:${ip}`).catch(() => { });
+    } catch (err) {
+        console.warn('⚠️ Redis unavailable — skipping resetFailedLoginCounter:', err.message || err);
+    }
 }
 
 /**

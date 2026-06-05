@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
-export default function LoginPage() {
+export default function LoginPage({ onBack }) {
     const { login, verifyTwoFactor } = useAuth();
     const [step, setStep] = useState('login');
     const [email, setEmail] = useState('');
@@ -81,6 +81,15 @@ export default function LoginPage() {
                         HỆ THỐNG AI THREAT MONITORING
                     </div>
                 </div>
+
+                {onBack && (
+                    <button 
+                        onClick={onBack} 
+                        className="btn btn-outline" 
+                        style={{ marginBottom: 20, fontSize: 12, padding: '6px 12px' }}>
+                        ← Trở về trang chủ
+                    </button>
+                )}
 
                 {/* Login card */}
                 <div className="card" style={{ padding: '32px 28px' }}>

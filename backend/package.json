@@ -5,6 +5,7 @@
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "seed": "node src/scripts/seed.js",
+    "demo:before-after": "node src/scripts/demo-before-after.js",
     "attack:brute": "node src/scripts/attacker/brute-force-attacker.js",
     "attack:sqli": "node src/scripts/attacker/sqli-attacker.js",
     "attack:xss": "node src/scripts/attacker/xss-attacker.js",

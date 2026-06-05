@@ -24,6 +24,9 @@ export default function Layout({ currentPage, onNavigate, children, liveAlerts =
     const [labOpen, setLabOpen] = useState(false);
     const isInLab = ['simulate', 'xss', 'visualizer'].includes(currentPage);
 
+    const [websites, setWebsites] = useState([]);
+    const [selectedSite, setSelectedSite] = useState(localStorage.getItem('selectedWebsiteId') || '');
+
     useEffect(() => {
         const timer = setInterval(() => setTime(new Date()), 1000);
         return () => clearInterval(timer);
@@ -31,7 +34,36 @@ export default function Layout({ currentPage, onNavigate, children, liveAlerts =
 
     useEffect(() => {
         if (isInLab) setLabOpen(true);
+        
+        // Fetch user's websites
+        import('../../services/api').then(({ api }) => {
+            api.get('/api/websites/my-sites')
+               .then(res => {
+                   if (res.data?.websites) {
+                       setWebsites(res.data.websites);
+                       // Auto-select first site if none selected
+                       if (res.data.websites.length > 0 && !localStorage.getItem('selectedWebsiteId')) {
+                           const firstId = res.data.websites[0].id;
+                           localStorage.setItem('selectedWebsiteId', firstId);
+                           setSelectedSite(firstId);
+                           window.location.reload();
+                       }
+                   }
+               })
+               .catch(err => console.error('Failed to fetch websites', err));
+        });
     }, []);
+
+    const handleSiteChange = (e) => {
+        const val = e.target.value;
+        if (val) {
+            localStorage.setItem('selectedWebsiteId', val);
+        } else {
+            localStorage.removeItem('selectedWebsiteId');
+        }
+        setSelectedSite(val);
+        window.location.reload(); // Quick way to reset all states across the app for the new tenant
+    };
 
     return (
         <div className="app-shell">
@@ -51,6 +83,32 @@ export default function Layout({ currentPage, onNavigate, children, liveAlerts =
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                    {websites.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', padding: '4px 12px', borderRadius: '4px', border: '1px solid var(--border)' }}>
+                            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Tenant:</span>
+                            <select 
+                                value={selectedSite} 
+                                onChange={handleSiteChange}
+                                style={{ 
+                                    background: 'transparent', 
+                                    color: 'var(--cyan)', 
+                                    border: 'none', 
+                                    outline: 'none',
+                                    fontFamily: 'var(--font-mono)',
+                                    fontSize: 12,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <option value="" style={{ background: 'var(--bg-base)', color: 'var(--text-primary)' }}>-- All Data (Global) --</option>
+                                {websites.map(w => (
+                                    <option key={w.id} value={w.id} style={{ background: 'var(--bg-base)', color: 'var(--text-primary)' }}>
+                                        {w.domain}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
                     {liveAlerts > 0 && (
                         <span className="badge critical">
                             ⚠ {liveAlerts} CẢNH BÁO ĐANG HOẠT ĐỘNG

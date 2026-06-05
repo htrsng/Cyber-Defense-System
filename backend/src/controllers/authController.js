@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 
 const User = require('../models/User');
-const { createLog } = require('../services/logService');
+const Wallet = require('../models/Wallet');
+const { createLog, resetFailedLoginCounter } = require('../services/logService');
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.JWT_SECRET_KEY || 'dev-secret-key-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
@@ -65,7 +66,53 @@ async function login(req, res) {
             return res.status(400).json({ error: 'Email and password are required' });
         }
 
+        // --- BẮT ĐẦU KỊCH BẢN DEMO "UNPROTECTED" ---
+        // Nếu CyberDef đang TẮT, và phát hiện pattern SQLi / sqlmap
+        if (!global.IS_SECURITY_ENABLED) {
+            const payloadStr = (email + password).toLowerCase();
+            const ua = (req.headers['user-agent'] || '').toLowerCase();
+            if (payloadStr.includes('\' or') || payloadStr.includes('sqlmap') || ua.includes('sqlmap')) {
+                console.log('⚠️ [DEMO] SQLMap detected but CyberDef is OFF -> Executing Exploit!');
+                
+                // Giả lập SQLi thành công -> lấy tài khoản admin đầu tiên
+                const hackUser = await User.findOne({ role: 'admin' }) || await User.findOne({});
+                if (hackUser) {
+                    const wallet = await Wallet.findOne({ userId: hackUser._id });
+                    if (wallet) {
+                        wallet.balance = 0; // Trộm sạch tiền
+                        wallet.transactions.unshift({
+                            type: 'exploit',
+                            amount: 1000000000,
+                            description: '⚠️ Giao dịch đáng ngờ — 1,000,000,000đ -> TK Hacker',
+                            status: 'success',
+                            ipAddress: req.ip,
+                            riskScore: 99,
+                            createdAt: new Date().toISOString()
+                        });
+                        await wallet.save();
+                        
+                        // Bắn sự kiện lên frontend để đổi màu UI lập tức
+                        req.app.get('io').emit('wallet_compromised', { 
+                            userId: hackUser._id, 
+                            wallet,
+                            message: 'SQL Injection thành công! Tiền đã bị đánh cắp.'
+                        });
+                    }
+                    
+                    const token = signToken(hackUser);
+                    return res.status(200).json({
+                        token,
+                        user: hackUser.toSafeObject(),
+                        warning: 'SQL Injection Bypassed Login!'
+                    });
+                }
+            }
+        }
+        // --- KẾT THÚC KỊCH BẢN DEMO ---
+
+        console.info('Login attempt for:', email);
         const user = await User.findOne({ email: email.toLowerCase() });
+        console.info('User lookup result:', !!user);
         if (!user) {
             await createLog({
                 eventType: 'LOGIN_FAILED',
@@ -83,7 +130,14 @@ async function login(req, res) {
             return res.status(403).json({ error: 'Account blocked' });
         }
 
-        const isPasswordValid = await user.comparePassword(password);
+        let isPasswordValid = false;
+        try {
+            isPasswordValid = await user.comparePassword(password);
+            console.info('Password compare result:', isPasswordValid);
+        } catch (pwErr) {
+            console.error('Password compare error:', pwErr);
+            throw pwErr;
+        }
         if (!isPasswordValid) {
             await createLog({
                 eventType: 'LOGIN_FAILED',
@@ -109,7 +163,12 @@ async function login(req, res) {
         user.loginCount += 1;
         await user.save();
 
+        // Reset failed login counter on successful login
+        const normalizedIp = String(req.ip || '').replace('::ffff:', '');
+        await resetFailedLoginCounter(normalizedIp);
+
         const token = signToken(user);
+        console.info('Token issued for user:', user._id.toString());
 
         await createLog({
             eventType: 'LOGIN_SUCCESS',
@@ -125,7 +184,7 @@ async function login(req, res) {
             user: user.toSafeObject(),
         });
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('Login error:', error && error.stack ? error.stack : error);
         return res.status(500).json({ error: 'Login failed' });
     }
 }

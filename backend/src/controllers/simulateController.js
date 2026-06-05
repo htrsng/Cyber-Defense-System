@@ -12,7 +12,7 @@ async function bruteForce(req, res, io) {
         const iterations = Number(req.body.iterations) || 15;
         const attempts = Math.max(5, Math.min(50, iterations));
         const delayMs = 300;
-        const attackerIp = '10.0.0.99';
+        const attackerIp = String(req.ip || req.headers['x-forwarded-for'] || '127.0.0.1').replace('::ffff:', '');
         const socket = req.app.get('io');
 
         for (let i = 1; i <= attempts; i += 1) {
@@ -78,7 +78,7 @@ async function bruteForce(req, res, io) {
 
 async function sqli(req, res, io) {
     try {
-        const attackerIp = '10.0.0.88';
+        const attackerIp = String(req.ip || req.headers['x-forwarded-for'] || '127.0.0.1').replace('::ffff:', '');
         const customPayloads = req.body.customPayloads || null;
         const payloads = customPayloads || [
             "' OR 1=1 --",
@@ -219,7 +219,7 @@ async function sqli(req, res, io) {
 
 async function honeypot(req, res, io) {
     try {
-        const attackerIp = '10.0.0.77';
+        const attackerIp = String(req.ip || req.headers['x-forwarded-for'] || '127.0.0.1').replace('::ffff:', '');
         const honeypotPaths = ['/.env', '/admin/secret', '/wp-admin', '/admin/backup', '/phpmyadmin'];
         const socket = req.app.get('io');
 

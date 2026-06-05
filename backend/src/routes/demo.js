@@ -110,7 +110,7 @@ router.post('/reset', authMiddleware, adminMiddleware, async (req, res) => {
  * Reset all wallets to 10,000,000đ — no auth required (demo only)
  * Also resets Redis security mode to unprotected
  */
-router.post('/reset-public', async (req, res) => {
+router.post('/reset-public', authMiddleware, adminMiddleware, async (req, res) => {
     try {
         const redis = require('../config/redis');
         const Wallet = require('../models/Wallet');

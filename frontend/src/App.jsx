@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import { useSocket } from './hooks/useSocket';
 import Layout from './components/layout/Layout';
 import LoginPage from './pages/LoginPage';
+import LandingPage from './pages/LandingPage';
 import OverviewPage from './pages/OverviewPage';
 import LiveLogsPage from './pages/LiveLogsPage';
 import RiskPage from './pages/RiskPage';
@@ -15,6 +16,8 @@ import { ThreatsPage } from './pages/ThreatsPage';
 import AttackVisualizerPage from './pages/AttackVisualizerPage';
 import './index.css';
 
+import AttackerConsolePage from './pages/AttackerConsolePage';
+
 const MAX_LOGS = 200;
 const MAX_ALERTS = 20;
 
@@ -26,12 +29,22 @@ function AppInner() {
     const [topIPs, setTopIPs] = useState([]);
     const [tarpitEvents, setTarpitEvents] = useState([]);
 
+    // Check if we are on the public attacker console page
+    if (window.location.pathname === '/attack') {
+        return <AttackerConsolePage />;
+    }
+
     // Real-time WebSocket handlers
     const onActivityLog = useCallback((data) => {
+        const selectedId = localStorage.getItem('selectedWebsiteId');
+        if (selectedId && data.websiteId && data.websiteId !== selectedId) return;
         setLogs(prev => [data, ...prev].slice(0, MAX_LOGS));
     }, []);
 
     const onSecurityAlert = useCallback((data) => {
+        const selectedId = localStorage.getItem('selectedWebsiteId');
+        if (selectedId && data.websiteId && data.websiteId !== selectedId) return;
+        
         setLiveAlerts(prev => [data, ...prev].slice(0, MAX_ALERTS));
         // Also add to logs feed
         setLogs(prev => [{
@@ -54,6 +67,8 @@ function AppInner() {
         tarpit_active: onTarpitActive,
     });
 
+    const [showLogin, setShowLogin] = useState(false);
+
     if (loading) {
         return (
             <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)' }}>
@@ -65,7 +80,12 @@ function AppInner() {
         );
     }
 
-    if (!user) return <LoginPage />;
+    if (!user) {
+        if (showLogin) {
+            return <LoginPage onBack={() => setShowLogin(false)} />;
+        }
+        return <LandingPage onLoginClick={() => setShowLogin(true)} />;
+    }
 
     const renderPage = () => {
         switch (page) {

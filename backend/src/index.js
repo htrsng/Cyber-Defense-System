@@ -103,6 +103,7 @@ app.use(conditionalSecurityMiddleware(rateLimit({
   legacyHeaders: false,
 })));
 app.use(conditionalSecurityMiddleware(require('./middleware/tarpit')));
+app.use(conditionalSecurityMiddleware(require('./middleware/waf')));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -118,6 +119,8 @@ app.use('/api/payguard', require('./routes/payguard'));
 app.use('/api/xss', require('./routes/xss'));
 app.use('/api/reports', authMiddleware, require('./routes/reports'));
 app.use('/api/admin', authMiddleware, adminMiddleware, require('./routes/admin'));
+app.use('/api/websites', require('./routes/websites'));
+app.use('/api/sdk', require('./routes/sdk'));
 
 // Honeypot endpoints — bẫy reconnaissance
 app.all('/admin/secret', require('./middleware/honeypot'));
@@ -149,7 +152,11 @@ function msUntilMidnight() {
 
 (async () => {
   await connectDB();
-  await redis.connect();
+  try {
+    await redis.connect();
+  } catch (err) {
+    console.warn('⚠️ Redis not available, continuing without Redis caching:', err.message || err);
+  }
   server.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`🍯 Honeypot endpoints active`);

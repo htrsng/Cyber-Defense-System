@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 const ActivityLog = require('../models/ActivityLog');
 const SecurityEvent = require('../models/SecurityEvent');
+const mongoose = require('mongoose');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { calculateRiskScore, batchCalculateRiskScore } = require('../services/riskScorer');
 const { runAnomalyDetection } = require('../services/anomalyDetector');
@@ -49,9 +50,10 @@ router.get('/top/ips', async (req, res) => {
     try {
         // Lấy các IPs có activity trong 1 giờ qua
         const since = new Date(Date.now() - 60 * 60 * 1000);
-        const activeIPs = await ActivityLog.distinct('ipAddress', {
-            createdAt: { $gte: since },
-        });
+        const query = { createdAt: { $gte: since } };
+        if (req.query.websiteId) query.websiteId = req.query.websiteId;
+
+        const activeIPs = await ActivityLog.distinct('ipAddress', query);
 
         const scored = await batchCalculateRiskScore(activeIPs);
         const top = scored.filter(r => r.score > 0).slice(0, 10);
@@ -77,6 +79,19 @@ router.post('/analyze', authMiddleware, adminMiddleware, async (req, res) => {
 router.get('/stats/overview', async (req, res) => {
     try {
         const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        
+        const logQuery = { createdAt: { $gte: since24h } };
+        const criticalLogQuery = { severity: { $in: ['critical', 'high'] }, createdAt: { $gte: since24h } };
+        const eventQuery = { resolved: false };
+        const matchStage = { createdAt: { $gte: since24h } };
+
+        if (req.query.websiteId) {
+            const websiteIdObj = new mongoose.Types.ObjectId(req.query.websiteId);
+            logQuery.websiteId = req.query.websiteId;
+            criticalLogQuery.websiteId = req.query.websiteId;
+            eventQuery.websiteId = req.query.websiteId;
+            matchStage.websiteId = websiteIdObj;
+        }
 
         const [
             totalEvents,
@@ -84,11 +99,11 @@ router.get('/stats/overview', async (req, res) => {
             unresolvedThreats,
             topEventTypes,
         ] = await Promise.all([
-            ActivityLog.countDocuments({ createdAt: { $gte: since24h } }),
-            ActivityLog.countDocuments({ severity: { $in: ['critical', 'high'] }, createdAt: { $gte: since24h } }),
-            SecurityEvent.countDocuments({ resolved: false }),
+            ActivityLog.countDocuments(logQuery),
+            ActivityLog.countDocuments(criticalLogQuery),
+            SecurityEvent.countDocuments(eventQuery),
             ActivityLog.aggregate([
-                { $match: { createdAt: { $gte: since24h } } },
+                { $match: matchStage },
                 { $group: { _id: '$eventType', count: { $sum: 1 } } },
                 { $sort: { count: -1 } },
                 { $limit: 5 },

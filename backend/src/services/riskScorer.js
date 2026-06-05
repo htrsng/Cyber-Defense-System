@@ -122,9 +122,9 @@ async function getWindowCounts(ip) {
         rateLimitHits,
         totalRequests1h,
     ] = await Promise.all([
-        redis.get(`failed_login:${ip}`).then(v => parseInt(v || '0')),
-        redis.get(`rate_limit_hit:${ip}`).then(v => parseInt(v || '0')),
-        redis.get(`req_count:${ip}`).then(v => parseInt(v || '0')),
+        redis.get(`failed_login:${ip}`).catch(() => '0').then(v => parseInt(v || '0')),
+        redis.get(`rate_limit_hit:${ip}`).catch(() => '0').then(v => parseInt(v || '0')),
+        redis.get(`req_count:${ip}`).catch(() => '0').then(v => parseInt(v || '0')),
     ]);
 
     return { failedLogins10m, rateLimitHits, totalRequests1h };

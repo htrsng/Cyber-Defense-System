@@ -7,6 +7,7 @@ const securityEventSchema = new mongoose.Schema({
     required: true,
   },
   ipAddress: { type: String, required: true },
+  websiteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Website', default: null },
   description: { type: String, required: true },
   severity: { type: String, enum: ['low', 'medium', 'high', 'critical'], default: 'medium' },
   riskScore: { type: Number, min: 0, max: 100, default: 0 },

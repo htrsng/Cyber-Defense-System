@@ -420,6 +420,39 @@ npm run attack:tarpit
 | SQLi | SQLI DETECTED | 50–80 | HIGH |
 | XSS | XSS DETECTED | 85 | CRITICAL |
 
+### Kịch bản demo before/after security
+
+Chạy một lệnh để xem 2 trạng thái của hệ thống:
+
+```bash
+cd backend
+npm run demo:before-after
+```
+
+Nếu muốn xem trước các lệnh sẽ chạy:
+
+```bash
+cd backend
+node src/scripts/demo-before-after.js --dry-run
+```
+
+Luồng demo:
+
+1. Reset wallet và tắt bảo mật.
+2. Chạy bộ tấn công ở trạng thái chưa bảo vệ.
+3. Reset lại trạng thái sạch.
+4. Bật bảo mật bằng admin token.
+5. Chạy lại cùng bộ tấn công để so sánh kết quả.
+
+Các attack script được dùng:
+
+- `npm run attack:recon`
+- `npm run attack:brute`
+- `npm run attack:sqli`
+- `npm run attack:xss`
+- `npm run attack:tarpit`
+- `npm run attack:transfer`
+
 ---
 
 ## 📡 API Reference

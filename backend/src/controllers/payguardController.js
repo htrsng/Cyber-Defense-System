@@ -32,31 +32,31 @@ function normalizeSecurityMode(mode) {
 }
 
 async function getSecurityMode() {
-    const storedMode = await redis.get(SECURITY_MODE_KEY);
+    const storedMode = await redis.get(SECURITY_MODE_KEY).catch(() => null);
 
     if (storedMode) {
         return normalizeSecurityMode(storedMode);
     }
 
     const fallbackMode = normalizeSecurityMode(DEFAULT_SECURITY_MODE);
-    await redis.set(SECURITY_MODE_KEY, fallbackMode);
+    await redis.set(SECURITY_MODE_KEY, fallbackMode).catch(() => null);
     return fallbackMode;
 }
 
 async function setSecurityMode(mode) {
     const normalizedMode = normalizeSecurityMode(mode);
-    await redis.set(SECURITY_MODE_KEY, normalizedMode);
+    await redis.set(SECURITY_MODE_KEY, normalizedMode).catch(() => null);
     return normalizedMode;
 }
 
 async function simulateCompromise(io) {
     try {
-        const already = await redis.get(COMPROMISED_KEY);
+        const already = await redis.get(COMPROMISED_KEY).catch(() => null);
         if (already) return; // run only once while flag present
 
         const wallets = await Wallet.find({});
         if (!wallets || wallets.length === 0) {
-            await redis.set(COMPROMISED_KEY, JSON.stringify({ scenario: 'none', ts: Date.now() }));
+            await redis.set(COMPROMISED_KEY, JSON.stringify({ scenario: 'none', ts: Date.now() })).catch(() => null);
             return;
         }
 
@@ -147,7 +147,7 @@ async function simulateCompromise(io) {
             io?.emit('wallet_update', { userId: wallet.userId, wallet, type: 'compromise' });
         }
 
-        await redis.set(COMPROMISED_KEY, JSON.stringify({ scenario, ts: Date.now() }));
+        await redis.set(COMPROMISED_KEY, JSON.stringify({ scenario, ts: Date.now() })).catch(() => null);
 
         await createLog({
             eventType: 'SYSTEM_COMPROMISED',
@@ -326,7 +326,7 @@ async function transfer(req, res) {
         // ============================================
         // SECURE MODE: Security Enabled
         // ============================================
-        const blocked = await redis.get(`blocked_ip:${ipAddress}`);
+        const blocked = await redis.get(`blocked_ip:${ipAddress}`).catch(() => null);
         const risk = await calculateRiskScore(ipAddress);
 
         await createLog({
