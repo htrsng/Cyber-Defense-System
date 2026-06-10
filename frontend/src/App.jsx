@@ -12,8 +12,15 @@ import XSSPage from './pages/XSSPage';
 import TwoFactorPage from './pages/TwoFactorPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ReportsPage from './pages/ReportsPage';
-import { ThreatsPage } from './pages/ThreatsPage';
+import ThreatsPage from './pages/ThreatsPage';
 import AttackVisualizerPage from './pages/AttackVisualizerPage';
+
+import TenantsPage from './pages/TenantsPage';
+import SecurityRulesPage from './pages/SecurityRulesPage';
+import PricingPage from './pages/PricingPage';
+import FraudAnalyticsPage from './pages/FraudAnalyticsPage';
+import IntegrationPage from './pages/IntegrationPage';
+
 import './index.css';
 
 import AttackerConsolePage from './pages/AttackerConsolePage';
@@ -99,6 +106,11 @@ function AppInner() {
             case 'reports': return <ReportsPage />;
             case 'threats': return <ThreatsPage liveAlerts={liveAlerts} />;
             case 'visualizer': return <AttackVisualizerPage />;
+            case 'tenants': return <TenantsPage />;
+            case 'rules': return <SecurityRulesPage />;
+            case 'pricing': return <PricingPage />;
+            case 'fraud': return <FraudAnalyticsPage />;
+            case 'integration': return <IntegrationPage />;
             default: return null;
         }
     };

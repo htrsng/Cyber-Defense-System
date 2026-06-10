@@ -6,20 +6,24 @@ const RESET = '\x1b[0m';
 const RED = '\x1b[31m';
 const GREEN = '\x1b[32m';
 const YELLOW = '\x1b[33m';
+const CYAN = '\x1b[36m';
+const BOLD = '\x1b[1m';
 
 const BASE = new URL('http://localhost:5000');
 const PATHS = [
-    '/.env',
-    '/admin/secret',
-    '/wp-admin',
-    '/admin/backup',
     '/phpmyadmin',
-    '/api/config',
-    '/.git/config',
-    '/admin/passwd',
+    '/admin/backup',
+    '/wp-admin',
+    '/.env',
+    '/api/admin/users'
 ];
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function getFormattedTime() {
+    const now = new Date();
+    return now.toTimeString().split(' ')[0];
+}
 
 function get(url) {
     const client = url.protocol === 'https:' ? https : http;
@@ -46,60 +50,72 @@ function get(url) {
     });
 }
 
-async function main() {
-    // Force simulation map: which paths should return 200 and custom messages
-    const SIMULATED_FOUND = {
-        '/api/config': '⚠ FOUND! Config exposed!',
-        '/.git/config': '⚠ FOUND! Git config exposed! DB credentials visible!',
-    };
-
-    let foundCount = 0;
-
-    // auto-detect remote security mode (if unprotected, behave more aggressively)
+async function fetchSecurityEnabled() {
     try {
-        const status = await get(new URL('/api/payguard/status', BASE));
-        try {
-            const parsed = status.body ? JSON.parse(status.body) : {};
-            if (parsed.securityEnabled === false) {
-                // if unprotected, include more paths as 'found' to simulate exposure
-                SIMULATED_FOUND['/.env'] = '⚠ FOUND! .env exposed!';
-            }
-        } catch (e) { }
+        const statusRes = await get(new URL('http://localhost:5000/api/payguard/status'));
+        if (statusRes && statusRes.body) {
+            const parsed = typeof statusRes.body === 'string' ? JSON.parse(statusRes.body || '{}') : statusRes.body;
+            return parsed.securityEnabled === true;
+        }
     } catch (e) {
-        // ignore
+        return false;
     }
+    return false;
+}
+
+async function main() {
+    console.log(`\n${BOLD}${RED}🔴 KỊCH BẢN 3: "Honeypot bắt hacker" — Attacker tự lộ mặt${RESET}\n`);
+    console.log(`Nhân vật: Hacker ẩn danh · Đang scan hệ thống PayGuard\n`);
+
+    console.log(`${YELLOW}Diễn biến:${RESET}\n`);
+    console.log(`${getFormattedTime()}  Hacker dùng tool tự động scan PayGuard`);
+    console.log(`          Tìm endpoint yếu để khai thác\n`);
+    await wait(1000);
+
+    const isProtected = await fetchSecurityEnabled();
 
     for (let i = 0; i < PATHS.length; i += 1) {
         const path = PATHS[i];
         const target = new URL(path, BASE);
 
-        console.log(`${YELLOW}[RECON] Probing GET ${target.href} ...${RESET}`);
+        // send actual request
+        await get(target);
 
-        try {
-            // If path is in simulated map, fake a 200 response with message
-            if (SIMULATED_FOUND[path]) {
-                console.log(`${GREEN}[200]   ${SIMULATED_FOUND[path]}${RESET}`);
-                foundCount += 1;
-            } else {
-                // Keep original behaviour for other paths
-                const response = await get(target);
-
-                if (response.statusCode === 404) {
-                    console.log(`${GREEN}[404]   Not found${RESET}`);
-                } else {
-                    console.log(`${YELLOW}[${response.statusCode}]   Response received${RESET}`);
-                }
-            }
-        } catch (error) {
-            console.log(`${RED}[ERROR] → ${error.message}${RESET}`);
+        if (isProtected) {
+            console.log(`${getFormattedTime()}  GET ${path.padEnd(20)} → ${YELLOW}[CyberDef: HONEYPOT]${RESET}`);
+        } else {
+            console.log(`${getFormattedTime()}  GET ${path.padEnd(20)} → [404 Not Found]`);
         }
-
-        if (i < PATHS.length - 1) {
-            await wait(300);
-        }
+        await wait(600);
     }
 
-    console.log(`${YELLOW}[SUMMARY] Tìm thấy ${foundCount} endpoint nhạy cảm | Database credentials exposed${RESET}`);
+    console.log(`\n          Hacker không biết đây là bẫy.`);
+    console.log(`          Hệ thống PayGuard thật không hề tồn tại ở những path này.\n`);
+    await wait(1500);
+
+    if (isProtected) {
+        console.log(`${getFormattedTime()}  ${CYAN}🍯 CyberDef ghi nhận:${RESET}`);
+        console.log(`          → IP 10.0.0.77 đã truy cập 5 honeypot endpoints`);
+        console.log(`          → Đây chắc chắn là attacker, không phải user thật`);
+        console.log(`          → IP bị ban vĩnh viễn`);
+        console.log(`          → Alert: "Reconnaissance attack detected"\n`);
+        await wait(2000);
+
+        console.log(`${getFormattedTime()}  Hacker tiếp tục scan — không nhận được phản hồi gì`);
+        console.log(`          Mọi request tiếp theo đều bị drop silently\n`);
+        console.log(`          Hacker không biết đã bị phát hiện và blacklist.`);
+        console.log(`          Họ nghĩ PayGuard đang offline.\n`);
+        await wait(1000);
+
+        console.log(`${BOLD}"Honeypot không chặn hacker — nó bẫy hacker.`);
+        console.log(`Chúng tôi không cần biết hacker là ai.`);
+        console.log(`Chúng tôi chỉ cần biết: ai truy cập /phpmyadmin — đó không phải khách hàng.`);
+        console.log(`Và IP đó sẽ không bao giờ chạm được đến PayGuard nữa."${RESET}\n`);
+    } else {
+        console.log(`${getFormattedTime()}  Hacker tiếp tục scan...`);
+        console.log(`          Không có Honeypot để phát hiện ý đồ xấu sớm.`);
+        console.log(`          Hacker có thể thoải mái thử hàng ngàn endpoint khác cho đến khi tìm ra lỗ hổng.\n`);
+    }
 }
 
 main().catch((error) => {

@@ -121,6 +121,10 @@ app.use('/api/reports', authMiddleware, require('./routes/reports'));
 app.use('/api/admin', authMiddleware, adminMiddleware, require('./routes/admin'));
 app.use('/api/websites', require('./routes/websites'));
 app.use('/api/sdk', require('./routes/sdk'));
+app.use('/api/tenants', require('./routes/tenants'));
+app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/policies', require('./routes/policies'));
+app.use('/api/pricing', require('./routes/pricing'));
 
 // Honeypot endpoints — bẫy reconnaissance
 app.all('/admin/secret', require('./middleware/honeypot'));

@@ -20,6 +20,8 @@ router.post('/toggle-security', authMiddleware, adminMiddleware, async (req, res
 
         // Update global security status
         global.IS_SECURITY_ENABLED = enabled;
+        const redis = require('../config/redis');
+        await redis.set('payguard:security_mode', enabled ? 'protected' : 'unprotected').catch(() => null);
 
         // Get io instance from app
         const io = req.app.get('io');
@@ -71,7 +73,7 @@ router.post('/reset', authMiddleware, adminMiddleware, async (req, res) => {
 
         // Reset to initial state: 10 million balance, no transactions
         const originalBalance = wallet.balance;
-        wallet.balance = 10000000;
+        wallet.balance = 5000000000;
         wallet.transactions = [];
 
         await wallet.save();
@@ -118,7 +120,7 @@ router.post('/reset-public', authMiddleware, adminMiddleware, async (req, res) =
         // Reset all wallets
         const wallets = await Wallet.find({});
         for (const wallet of wallets) {
-            wallet.balance = 10000000;
+            wallet.balance = 5000000000;
             wallet.transactions = [];
             await wallet.save();
         }
@@ -129,10 +131,10 @@ router.post('/reset-public', authMiddleware, adminMiddleware, async (req, res) =
 
         // Notify all clients
         const io = req.app.get('io');
-        io?.emit('wallet_update', { type: 'reset', newBalance: 10000000 });
+        io?.emit('wallet_update', { type: 'reset', newBalance: 5000000000 });
         io?.emit('security_status_changed', { enabled: false, timestamp: new Date() });
 
-        console.log(`🔄 [DEMO] All wallets reset to 10,000,000đ, security disabled`);
+        console.log(`🔄 [DEMO] All wallets reset to 5,000,000,000đ, security disabled`);
         return res.json({ success: true, message: 'Demo reset complete', walletsReset: wallets.length });
     } catch (error) {
         console.error('reset-public error:', error);

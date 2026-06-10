@@ -30,6 +30,12 @@ const websiteSchema = new mongoose.Schema({
     enum: ['free', 'pro', 'enterprise'],
     default: 'free',
   },
+  subscription: {
+    startDate: { type: Date, default: Date.now },
+    billingCycle: { type: String, enum: ['monthly', 'yearly'], default: 'monthly' },
+    nextBillingDate: { type: Date },
+    status: { type: String, enum: ['active', 'trial', 'expired', 'cancelled'], default: 'trial' }
+  },
   dailyRequestCount: {
     type: Number,
     default: 0,
@@ -64,12 +70,56 @@ websiteSchema.statics.generateApiKey = function () {
  * Get daily request limit based on plan
  */
 websiteSchema.statics.getPlanLimit = function (plan) {
-  const limits = {
-    free: 1000,
-    pro: 50000,
-    enterprise: 500000,
+  const features = this.getPlanFeatures(plan);
+  return features.dailyRequestLimit;
+};
+
+/**
+ * Get detailed plan features
+ */
+websiteSchema.statics.getPlanFeatures = function (plan) {
+  const features = {
+    free: {
+      maxWebsites: 1,
+      dailyRequestLimit: 1000,
+      wafEnabled: true, // basic
+      riskScoringEnabled: false,
+      tarpitEnabled: false,
+      honeypotEnabled: false,
+      emailAlerts: false,
+      pdfReports: false,
+      customRules: false,
+      twoFactorSupport: false,
+      sla: null
+    },
+    pro: {
+      maxWebsites: 10,
+      dailyRequestLimit: 100000,
+      wafEnabled: true, // full
+      riskScoringEnabled: true,
+      tarpitEnabled: true,
+      honeypotEnabled: true,
+      emailAlerts: true,
+      pdfReports: true,
+      customRules: false,
+      twoFactorSupport: true,
+      sla: '99.9%'
+    },
+    enterprise: {
+      maxWebsites: 999,
+      dailyRequestLimit: 999999999, // unlimited
+      wafEnabled: true, // full + custom
+      riskScoringEnabled: true,
+      tarpitEnabled: true,
+      honeypotEnabled: true,
+      emailAlerts: true,
+      pdfReports: true,
+      customRules: true,
+      twoFactorSupport: true,
+      sla: '99.99%'
+    }
   };
-  return limits[plan] || limits.free;
+  return features[plan] || features.free;
 };
 
 /**

@@ -63,6 +63,16 @@ module.exports = async (req, res) => {
       timestamp: new Date(),
     });
 
+    // Phát sự kiện attack_blocked để giao diện hiển thị màn hình xanh "Tấn công bị chặn"
+    if (global.IS_SECURITY_ENABLED) {
+        io?.emit('attack_blocked', {
+            ip: ipAddress,
+            type: 'honeypot',
+            score: 95,
+            timestamp: new Date(),
+        });
+    }
+
     console.warn(`🍯 HONEYPOT: ${ipAddress} → ${req.method} ${req.path}`);
   } catch (err) {
     console.error('Honeypot log error:', err.message);

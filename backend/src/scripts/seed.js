@@ -16,11 +16,14 @@ const SecurityEvent = require('../models/SecurityEvent');
 
 async function seedUsers() {
     const users = [
-        { email: 'admin@cyberdef.io', password: 'Admin@123', role: 'admin' },
+        { email: 'admin@payguard.vn', password: 'Admin@123', role: 'admin' },
         { email: 'tranghuyen20051312@gmail.com', password: 'Admin@123', role: 'admin' },
         { email: 'viewer@cyberdef.io', password: 'Viewer@123', role: 'viewer' },
+        { email: 'minh@payguard.local', password: 'Password@123', role: 'viewer' },
+        { email: 'lan@payguard.local', password: 'lan1990', role: 'viewer' },
     ];
 
+    const Wallet = require('../models/Wallet');
     const createdUsers = [];
 
     for (const user of users) {
@@ -43,6 +46,27 @@ async function seedUsers() {
         ).lean();
 
         createdUsers.push(savedUser);
+
+        // Seed wallets for Admin, Minh and Lan
+        if (user.email === 'admin@payguard.vn') {
+            await Wallet.findOneAndUpdate(
+                { userId: savedUser._id },
+                { $setOnInsert: { accountNumber: 'PAY-ADMIN' + Date.now().toString().slice(-4) }, $set: { balance: 5000000000, transactions: [] } },
+                { upsert: true, new: true, setDefaultsOnInsert: true }
+            );
+        } else if (user.email === 'minh@payguard.local') {
+            await Wallet.findOneAndUpdate(
+                { userId: savedUser._id },
+                { $setOnInsert: { accountNumber: 'PAY-MINH' + Date.now().toString().slice(-4) }, $set: { balance: 52300000, transactions: [] } },
+                { upsert: true, new: true, setDefaultsOnInsert: true }
+            );
+        } else if (user.email === 'lan@payguard.local') {
+            await Wallet.findOneAndUpdate(
+                { userId: savedUser._id },
+                { $setOnInsert: { accountNumber: 'PAY-LAN' + Date.now().toString().slice(-5) }, $set: { balance: 8500000, transactions: [] } },
+                { upsert: true, new: true, setDefaultsOnInsert: true }
+            );
+        }
     }
 
     return createdUsers;

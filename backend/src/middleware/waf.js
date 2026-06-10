@@ -38,6 +38,16 @@ module.exports = async function wafMiddleware(req, res, next) {
         // Giả lập Tarpit hoặc block luôn
         console.log(`[WAF BLOCKED] SQLi payload detected from ${req.ip}`);
         
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('attack_blocked', {
+                ip: req.ip,
+                type: 'sqli',
+                score: 95,
+                timestamp: new Date()
+            });
+        }
+        
         return res.status(403).json({
             error: 'WAF Blocked',
             message: 'Malicious payload detected and blocked by CyberDef WAF.'

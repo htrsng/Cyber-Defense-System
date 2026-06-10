@@ -3,6 +3,16 @@ import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import { io } from 'socket.io-client';
 import './index.css';
 
+import AdminOverview from './admin_pages/AdminOverview';
+import AdminUsers from './admin_pages/AdminUsers';
+import AdminTransactions from './admin_pages/AdminTransactions';
+import AdminRiskMonitoring from './admin_pages/AdminRiskMonitoring';
+import AdminSecurity from './admin_pages/AdminSecurity';
+import AdminDemo from './admin_pages/AdminDemo';
+import AdminSettings from './admin_pages/AdminSettings';
+import AdminKYC from './admin_pages/AdminKYC';
+import AdminAuditLogs from './admin_pages/AdminAuditLogs';
+
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 function AdminApp() {
@@ -11,12 +21,22 @@ function AdminApp() {
     const [securityEnabled, setSecurityEnabled] = useState(false);
     const [stats, setStats] = useState({ users: 0, txs: 0, totalMoney: 0 });
     const [logs, setLogs] = useState([]);
+    const [showAvatarMenu, setShowAvatarMenu] = useState(false);
 
     // Fetch initial status
     useEffect(() => {
-        // Here we'd normally fetch the real status from backend
-        // For demo, we just rely on sockets or a /api/demo/status route if we had one.
-        // We'll mock a simple fetch or wait for socket event
+        const fetchStatus = async () => {
+            try {
+                const res = await fetch(`${API_URL}/api/payguard/status`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setSecurityEnabled(Boolean(data.securityEnabled));
+                }
+            } catch (err) {
+                console.error("Failed to fetch initial security status", err);
+            }
+        };
+        fetchStatus();
     }, []);
 
     // Socket listeners for live security monitor
@@ -70,13 +90,35 @@ function AdminApp() {
         }
     };
 
-    const navItems = [
-        { path: '/admin/overview', label: 'Overview', icon: '📊' },
-        { path: '/admin/users', label: 'Quản Lý Users', icon: '👥' },
-        { path: '/admin/transactions', label: 'Quản Lý Giao Dịch', icon: '💳' },
-        { path: '/admin/security', label: 'Security Monitor', icon: '🛡️' },
-        { path: '/admin/demo', label: 'Demo Control', icon: '🎮' },
-        { path: '/admin/settings', label: 'System Settings', icon: '⚙️' },
+    const navGroups = [
+        {
+            title: 'TỔNG QUAN',
+            items: [
+                { path: '/admin/overview', label: 'Tổng quan', icon: '📊' }
+            ]
+        },
+        {
+            title: 'VẬN HÀNH',
+            items: [
+                { path: '/admin/users', label: 'Người dùng', icon: '👥' },
+                { path: '/admin/kyc', label: 'Xác thực KYC', icon: '🪪' },
+                { path: '/admin/transactions', label: 'Giao dịch', icon: '💳' },
+            ]
+        },
+        {
+            title: 'BẢO MẬT',
+            items: [
+                { path: '/admin/risk', label: 'Giám sát rủi ro', icon: '⚠️' },
+                { path: '/admin/security', label: 'Bảo mật CyberDef', icon: '🛡️' },
+                { path: '/admin/audit', label: 'Nhật ký hệ thống', icon: '📋' },
+            ]
+        },
+        {
+            title: 'HỆ THỐNG',
+            items: [
+                { path: '/admin/settings', label: 'Cài đặt', icon: '⚙️' },
+            ]
+        }
     ];
 
     // Redirect /admin to /admin/overview
@@ -87,256 +129,139 @@ function AdminApp() {
     }, [location, navigate]);
 
     return (
-        <div className="pg-layout" style={{ background: '#09090b', color: '#fff' }}>
+        <div className="pg-layout" style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#09090b', color: '#fff' }}>
             {/* Sidebar */}
-            <aside className="pg-sidebar" style={{ background: '#111827', borderRight: '1px solid #1f2937' }}>
-                <div className="pg-brand" style={{ color: '#60a5fa' }}>
-                    <div className="pg-logo">🛡️</div>
-                    <div>
-                        <div className="pg-brand-name">CyberDef Admin</div>
-                        <div className="pg-brand-sub">Command Center</div>
+            <aside className="pg-sidebar" style={{ position: 'relative', width: 280, flexShrink: 0, background: '#111827', borderRight: '1px solid #1f2937' }}>
+                <div className="brand-section" style={{ padding: 24, borderBottom: '1px solid rgba(255,255,255,.08)', background: 'linear-gradient(180deg, rgba(37,99,235,.15), transparent)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+                        <div className="logo-icon" style={{ fontSize: 48, filter: 'drop-shadow(0 0 10px rgba(59,130,246,0.6)) drop-shadow(0 0 20px rgba(6,182,212,0.4))' }}>🛡️</div>
+                        <div>
+                            <div className="logo-title" style={{ fontSize: 24, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.2 }}>PayGuard</div>
+                            <div className="logo-subtitle" style={{ fontSize: 11, color: '#60a5fa', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2 }}>Hệ thống Quản trị</div>
+                        </div>
+                    </div>
+                    
+                    <div style={{ padding: '10px 14px', background: 'rgba(0,0,0,0.2)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: securityEnabled ? '#34d399' : '#ef4444' }}>
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: securityEnabled ? '#34d399' : '#ef4444', boxShadow: `0 0 8px ${securityEnabled ? '#34d399' : '#ef4444'}` }} />
+                            {securityEnabled ? 'ĐÃ BẢO VỆ' : 'NGUY HIỂM'}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4, marginLeft: 16 }}>
+                            {securityEnabled ? 'Hệ thống hoạt động bình thường' : 'Phát hiện mối đe dọa'}
+                        </div>
                     </div>
                 </div>
                 
-                <div className="pg-nav">
-                    {navItems.map(item => {
-                        const isActive = location.pathname.startsWith(item.path);
-                        return (
-                            <Link key={item.path} to={item.path} className={`pg-nav-item ${isActive ? 'active' : ''}`} style={isActive ? { background: '#1e3a8a', color: '#60a5fa' } : {}}>
-                                <span className="pg-nav-icon">{item.icon}</span>
-                                <span className="pg-nav-label">{item.label}</span>
-                            </Link>
-                        );
-                    })}
+                <div className="pg-nav" style={{ gap: 8, padding: '0 16px', flex: 1, overflowY: 'auto' }}>
+                    <div style={{ marginBottom: 24 }}>
+                        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', color: '#9ca3af', fontSize: 13, fontWeight: 600, textDecoration: 'none', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}>
+                            <span style={{ fontSize: 16 }}>⬅️</span> Về lại PayGuard
+                        </Link>
+                    </div>
+                    {navGroups.map((group, idx) => (
+                        <div key={idx} style={{ marginBottom: 24 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 8, letterSpacing: '0.05em' }}>{group.title}</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                {group.items.map(item => {
+                                    const isActive = location.pathname.startsWith(item.path);
+                                    return (
+                                        <Link key={item.path} to={item.path} className={`pg-nav-item ${isActive ? 'active' : ''}`} style={{ ...(isActive ? { background: '#1e3a8a', color: '#60a5fa' } : { color: '#d1d5db' }), padding: '10px 14px', fontSize: 14, borderRadius: 8, display: 'flex', gap: 12, textDecoration: 'none', transition: 'background 0.2s' }} onMouseEnter={(e) => !isActive && (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')} onMouseLeave={(e) => !isActive && (e.currentTarget.style.background = 'transparent')}>
+                                            <span className="pg-nav-icon" style={{ fontSize: 18 }}>{item.icon}</span>
+                                            <span className="pg-nav-label" style={{ fontWeight: isActive ? 600 : 500 }}>{item.label}</span>
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
                 </div>
 
-                <div className="pg-sidebar-bottom">
-                    <div className="pg-user-badge" style={{ background: '#1f2937' }}>
-                        <div className="pg-avatar" style={{ background: '#60a5fa' }}>A</div>
-                        <div className="pg-user-info">
-                            <div className="pg-user-name">Administrator</div>
-                            <div className="pg-user-role" style={{ color: securityEnabled ? '#34d399' : '#f87171' }}>
-                                {securityEnabled ? '🟢 System Protected' : '🔴 System Vulnerable'}
+                <div className="pg-sidebar-bottom" style={{ position: 'relative', padding: 16, borderTop: '1px solid #1f2937' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: '#1f2937', borderRadius: 8, cursor: 'pointer', transition: 'background 0.2s' }} onClick={() => setShowAvatarMenu(!showAvatarMenu)} onMouseEnter={(e) => e.currentTarget.style.background = '#374151'} onMouseLeave={(e) => e.currentTarget.style.background = '#1f2937'}>
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #60a5fa)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, flexShrink: 0 }}>A</div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>admin@payguard.vn</span>
+                                <span style={{ flexShrink: 0, fontSize: 9, background: '#f59e0b', color: '#fff', padding: '2px 4px', borderRadius: 4, fontWeight: 800 }}>ADMIN</span>
+                            </div>
+                            <div style={{ fontSize: 11, color: securityEnabled ? '#34d399' : '#f87171', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <div style={{ width: 6, height: 6, borderRadius: '50%', background: securityEnabled ? '#34d399' : '#f87171' }} />
+                                {securityEnabled ? 'Hệ thống an toàn' : 'Hệ thống đang bị đe dọa'}
                             </div>
                         </div>
                     </div>
+                    {showAvatarMenu && (
+                        <div style={{ position: 'absolute', bottom: '100%', left: 16, right: 16, marginBottom: 8, background: '#1e293b', borderRadius: 8, overflow: 'hidden', border: '1px solid #334155', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)', zIndex: 100 }}>
+                            <div style={{ padding: '12px 16px', borderBottom: '1px solid #334155', color: '#fff', fontSize: 14, cursor: 'pointer' }} onClick={() => { setShowAvatarMenu(false); alert('Tính năng Hồ sơ đang phát triển'); }}>Hồ sơ cá nhân</div>
+                            <div style={{ padding: '12px 16px', borderBottom: '1px solid #334155', color: '#fff', fontSize: 14, cursor: 'pointer' }} onClick={() => { setShowAvatarMenu(false); navigate('/admin/security'); }}>Bảo mật CyberDef</div>
+                            <div style={{ padding: '12px 16px', borderBottom: '1px solid #334155', color: '#34d399', fontSize: 14, cursor: 'pointer', fontWeight: 'bold' }} onClick={() => navigate('/')}>
+                                Chuyển sang App Người dùng
+                            </div>
+                            <div style={{ padding: '12px 16px', color: '#ef4444', fontSize: 14, cursor: 'pointer' }} onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('userEmail'); navigate('/'); }}>Đăng xuất</div>
+                        </div>
+                    )}
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main className="pg-main" style={{ padding: '32px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100vh', overflow: 'hidden' }}>
+                <header style={{ padding: '0 32px', minHeight: 64, background: '#111827', borderBottom: '1px solid #1f2937', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+                        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#fff' }}>Trung tâm điều khiển</h2>
+                        <div style={{ width: 1, height: 24, background: '#374151' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 13 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: securityEnabled ? '#34d399' : '#f87171' }}>
+                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: securityEnabled ? '#34d399' : '#f87171', boxShadow: `0 0 8px ${securityEnabled ? '#34d399' : '#f87171'}` }} />
+                                Trạng thái SOC: <span style={{ fontWeight: 600 }}>{securityEnabled ? 'Đã bảo vệ' : 'Cảnh báo'}</span>
+                            </div>
+                            <button 
+                                onClick={() => toggleSecurity(!securityEnabled)}
+                                style={{
+                                    background: securityEnabled ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)',
+                                    color: securityEnabled ? '#ef4444' : '#10b981',
+                                    border: `1px solid ${securityEnabled ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`,
+                                    padding: '4px 12px',
+                                    borderRadius: 6,
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {securityEnabled ? '🛑 TẮT BẢO VỆ' : '🛡️ BẬT BẢO VỆ'}
+                            </button>
+                            <div style={{ color: '#9ca3af' }}>⏱ Quét lần cuối: <span style={{ color: '#fff' }}>2s trước</span></div>
+                            <div style={{ color: '#9ca3af' }}>🌍 Khu vực: <span style={{ color: '#fff' }}>Global</span></div>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                        <button onClick={() => navigate('/admin/audit')} style={{ background: 'transparent', border: 'none', color: '#9ca3af', fontSize: 18, cursor: 'pointer', position: 'relative' }}>
+                            🔔
+                            <div style={{ position: 'absolute', top: 0, right: -4, width: 8, height: 8, background: '#ef4444', borderRadius: '50%', border: '2px solid #111827' }} />
+                        </button>
+                        <button onClick={() => navigate('/admin/settings')} style={{ background: 'transparent', border: 'none', color: '#9ca3af', fontSize: 18, cursor: 'pointer' }}>⚙️</button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingLeft: 20, borderLeft: '1px solid #374151', cursor: 'pointer' }}>
+                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#3b82f6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}>A</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Admin</div>
+                        </div>
+                    </div>
+                </header>
+                <main className="pg-main" style={{ marginLeft: 0, padding: '32px', flex: 1, overflowY: 'auto', minHeight: 0 }}>
                 <Routes>
                     <Route path="overview" element={<AdminOverview resetDemo={resetDemo} toggleSecurity={toggleSecurity} securityEnabled={securityEnabled} />} />
                     <Route path="users" element={<AdminUsers />} />
+                    <Route path="kyc" element={<AdminKYC />} />
                     <Route path="transactions" element={<AdminTransactions />} />
+                    <Route path="risk" element={<AdminRiskMonitoring />} />
                     <Route path="security" element={<AdminSecurity logs={logs} />} />
+                    <Route path="audit" element={<AdminAuditLogs />} />
                     <Route path="demo" element={<AdminDemo resetDemo={resetDemo} toggleSecurity={toggleSecurity} securityEnabled={securityEnabled} />} />
                     <Route path="settings" element={<AdminSettings />} />
                 </Routes>
-            </main>
-        </div>
-    );
-}
-
-// ─── PAGE COMPONENTS ───
-
-function AdminOverview({ resetDemo, toggleSecurity, securityEnabled }) {
-    return (
-        <div style={{ display: 'grid', gap: 24 }}>
-            <h1 style={{ fontSize: 28, margin: 0 }}>Overview</h1>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-                <div className="pg-panel pg-shadow-md" style={{ background: '#1f2937', borderColor: '#374151' }}>
-                    <div style={{ color: '#9ca3af', marginBottom: 8 }}>Trạng thái hệ thống</div>
-                    <div style={{ fontSize: 24, fontWeight: 'bold', color: securityEnabled ? '#34d399' : '#f87171' }}>
-                        {securityEnabled ? '🛡️ PROTECTED' : '⚠️ UNPROTECTED'}
-                    </div>
-                </div>
-                <div className="pg-panel pg-shadow-md" style={{ background: '#1f2937', borderColor: '#374151' }}>
-                    <div style={{ color: '#9ca3af', marginBottom: 8 }}>Tổng người dùng</div>
-                    <div style={{ fontSize: 24, fontWeight: 'bold' }}>1,248</div>
-                </div>
-                <div className="pg-panel pg-shadow-md" style={{ background: '#1f2937', borderColor: '#374151' }}>
-                    <div style={{ color: '#9ca3af', marginBottom: 8 }}>Tổng tiền giao dịch (24h)</div>
-                    <div style={{ fontSize: 24, fontWeight: 'bold' }}>42.5B VNĐ</div>
-                </div>
-            </div>
-
-            <div className="pg-panel" style={{ background: '#1f2937', borderColor: '#374151' }}>
-                <h2 style={{ marginTop: 0 }}>Quick Actions</h2>
-                <div style={{ display: 'flex', gap: 16 }}>
-                    <button 
-                        onClick={() => toggleSecurity(!securityEnabled)}
-                        style={{ 
-                            padding: '12px 24px', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer',
-                            background: securityEnabled ? '#f87171' : '#34d399', color: '#fff', border: 'none'
-                        }}
-                    >
-                        {securityEnabled ? 'TẮT CyberDef (Vulnerable)' : 'BẬT CyberDef (Protected)'}
-                    </button>
-                    <button 
-                        onClick={resetDemo}
-                        style={{ 
-                            padding: '12px 24px', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer',
-                            background: '#3b82f6', color: '#fff', border: 'none'
-                        }}
-                    >
-                        🔄 Hoàn tiền về 1 Tỷ (Reset Demo)
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function AdminUsers() {
-    return (
-        <div style={{ display: 'grid', gap: 24 }}>
-            <h1 style={{ fontSize: 28, margin: 0 }}>Quản Lý Users</h1>
-            <div className="pg-panel" style={{ background: '#1f2937', borderColor: '#374151' }}>
-                <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ borderBottom: '1px solid #374151' }}>
-                            <th style={{ padding: '12px 0' }}>Email</th>
-                            <th>Trạng thái</th>
-                            <th>Risk Score</th>
-                            <th>Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style={{ padding: '12px 0' }}>admin@payguard.vn</td>
-                            <td><span className="pg-badge success">Active</span></td>
-                            <td><span className="pg-badge success">0 (Safe)</span></td>
-                            <td><button className="pg-badge muted" style={{ cursor: 'pointer' }}>Chi tiết</button></td>
-                        </tr>
-                        <tr style={{ borderBottom: '1px solid #374151' }}>
-                            <td style={{ padding: '12px 0' }}>hacker@evil.com</td>
-                            <td><span className="pg-badge danger">Suspicious</span></td>
-                            <td><span className="pg-badge danger">95 (Critical)</span></td>
-                            <td><button className="pg-badge info" style={{ cursor: 'pointer' }}>Unlock IP</button></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-}
-
-function AdminTransactions() {
-    return (
-        <div style={{ display: 'grid', gap: 24 }}>
-            <h1 style={{ fontSize: 28, margin: 0 }}>Quản Lý Giao Dịch</h1>
-            <div className="pg-panel" style={{ background: '#1f2937', borderColor: '#374151' }}>
-                <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ borderBottom: '1px solid #374151' }}>
-                            <th style={{ padding: '12px 0' }}>Mã GD</th>
-                            <th>Số tiền</th>
-                            <th>Người gửi</th>
-                            <th>Trạng thái / Flag</th>
-                            <th>Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style={{ padding: '12px 0' }}>TX-10924</td>
-                            <td>1,000,000,000đ</td>
-                            <td>admin@payguard.vn</td>
-                            <td><span className="pg-badge danger">⚠️ Suspicious</span></td>
-                            <td><button className="pg-badge warning" style={{ cursor: 'pointer' }}>Reverse</button></td>
-                        </tr>
-                        <tr>
-                            <td style={{ padding: '12px 0' }}>TX-10923</td>
-                            <td>500,000đ</td>
-                            <td>user@demo.com</td>
-                            <td><span className="pg-badge success">Normal</span></td>
-                            <td>—</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-}
-
-function AdminSecurity({ logs }) {
-    return (
-        <div style={{ display: 'grid', gap: 24, height: '100%' }}>
-            <h1 style={{ fontSize: 28, margin: 0 }}>Security Monitor (Live Logs)</h1>
-            <div className="pg-panel" style={{ background: '#111827', borderColor: '#374151', height: '600px', overflowY: 'auto', fontFamily: 'monospace' }}>
-                {logs.length === 0 ? (
-                    <div style={{ color: '#6b7280', textAlign: 'center', marginTop: 40 }}>Waiting for security events...</div>
-                ) : (
-                    logs.map((log, i) => (
-                        <div key={i} style={{ 
-                            padding: '12px', borderBottom: '1px solid #1f2937', 
-                            color: log.severity === 'critical' ? '#ef4444' : log.severity === 'high' ? '#f59e0b' : '#3b82f6'
-                        }}>
-                            <span style={{ color: '#9ca3af' }}>[{new Date(log.timestamp).toLocaleTimeString()}]</span>{' '}
-                            <strong>[{log.eventType}]</strong> IP: {log.ipAddress} — {log.riskLevel} (Score: {log.riskScore})
-                            {log.metadata?.triggerPattern && <div>↳ Pattern matched: {log.metadata.triggerPattern}</div>}
-                        </div>
-                    ))
-                )}
-            </div>
-        </div>
-    );
-}
-
-function AdminDemo({ resetDemo, toggleSecurity, securityEnabled }) {
-    return (
-        <div style={{ display: 'grid', gap: 24 }}>
-            <h1 style={{ fontSize: 28, margin: 0 }}>Demo Control Panel</h1>
-            <div className="pg-panel" style={{ background: '#1f2937', borderColor: '#374151' }}>
-                <h2 style={{ marginTop: 0 }}>Chuẩn bị kịch bản</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-                    
-                    <div style={{ border: '2px dashed #f87171', padding: 24, borderRadius: 12, textAlign: 'center' }}>
-                        <h3 style={{ color: '#f87171' }}>1. Unprotected Mode</h3>
-                        <p style={{ color: '#9ca3af', fontSize: 14 }}>Tắt WAF. Lệnh sqlmap sẽ bypass login và trừ sạch tiền.</p>
-                        <button 
-                            onClick={() => { resetDemo(); setTimeout(() => toggleSecurity(false), 500); }}
-                            style={{ padding: '12px 24px', background: '#f87171', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold' }}>
-                            Kích hoạt Unprotected
-                        </button>
-                    </div>
-
-                    <div style={{ border: '2px dashed #34d399', padding: 24, borderRadius: 12, textAlign: 'center' }}>
-                        <h3 style={{ color: '#34d399' }}>2. Protected Mode</h3>
-                        <p style={{ color: '#9ca3af', fontSize: 14 }}>Bật WAF. Lệnh sqlmap sẽ bị chặn, Tarpit kích hoạt, tiền an toàn.</p>
-                        <button 
-                            onClick={() => { resetDemo(); setTimeout(() => toggleSecurity(true), 500); }}
-                            style={{ padding: '12px 24px', background: '#34d399', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold' }}>
-                            Kích hoạt Protected
-                        </button>
-                    </div>
-
-                </div>
-            </div>
-            
-            <div className="pg-panel" style={{ background: '#1f2937', borderColor: '#374151' }}>
-                <h2 style={{ marginTop: 0 }}>Terminal Command (Copy & Paste)</h2>
-                <div style={{ background: '#000', padding: 16, borderRadius: 8, fontFamily: 'monospace', color: '#34d399' }}>
-                    sqlmap -u "http://localhost:5000/api/auth/login" --data="email=admin@payguard.vn&password=1" --dbs --batch
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function AdminSettings() {
-    return (
-        <div style={{ display: 'grid', gap: 24 }}>
-            <h1 style={{ fontSize: 28, margin: 0 }}>System Settings</h1>
-            <div className="pg-panel" style={{ background: '#1f2937', borderColor: '#374151' }}>
-                <p>Cấu hình CyberDef API Endpoint, Email Alert, Whitelist IP... (Static Demo)</p>
-                <div style={{ opacity: 0.5 }}>
-                    <div style={{ marginBottom: 16 }}>
-                        <label style={{ display: 'block', marginBottom: 8 }}>Ngưỡng Auto-Lock (Risk Score)</label>
-                        <input type="number" value="80" disabled style={{ padding: 8, background: '#111827', border: '1px solid #374151', color: '#fff' }} />
-                    </div>
-                </div>
+                </main>
             </div>
         </div>
     );

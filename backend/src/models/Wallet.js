@@ -13,7 +13,7 @@ const transactionSchema = new mongoose.Schema({
 
 const walletSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    balance: { type: Number, default: 10000000 },
+    balance: { type: Number, default: 5000000000 },
     accountNumber: { type: String, unique: true },
     bankLinked: { type: Boolean, default: true },
     bankName: { type: String, default: 'Vietcombank' },

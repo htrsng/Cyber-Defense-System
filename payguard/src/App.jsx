@@ -1,9 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { format } from 'date-fns';
 import { io } from 'socket.io-client';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import './index.css';
+
+
+import TransactionsPage from './TransactionsPage';
+import UserWalletPage from './UserWalletPage';
+import UserSecurityPage from './UserSecurityPage';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const money = new Intl.NumberFormat('vi-VN');
@@ -57,7 +62,7 @@ const DEFAULT_CATEGORIES = [
 ];
 
 const DEMO_WALLET = {
-  balance: 10000000,
+  balance: 5000000000,
   accountNumber: 'PAY-20240601',
   bankLinked: true, bankName: 'Vietcombank', bankAccount: '****3456',
   categories: DEFAULT_CATEGORIES,
@@ -80,10 +85,11 @@ const BANKS = ['Vietcombank', 'Techcombank', 'MBBank', 'TPBank', 'VietinBank', '
 /* ─── Helpers ─── */
 function parseToken(t) {
   if (!t) return null;
+  const email = localStorage.getItem('userEmail') || 'user@payguard.io';
   try {
     const p = JSON.parse(atob(t.split('.')[1]));
-    return { email: p?.email || 'user@payguard.io', token: t };
-  } catch { return { email: 'user@payguard.io', token: t }; }
+    return { email: p?.email || email, token: t, role: p?.role };
+  } catch { return { email, token: t }; }
 }
 
 function getRiskColor(s) {
@@ -236,8 +242,8 @@ function SpendingChart({ categories }) {
 }
 
 /* ─── Category Modal ─── */
-const CAT_EMOJIS = ['🍜','🚗','🛍️','🎮','💡','💰','🏥','📚','✈️','🏠','👕','☕','🎬','💻','🎁','📱'];
-const CAT_COLORS = ['#2563eb','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#06b6d4'];
+const CAT_EMOJIS = ['🍜', '🚗', '🛍️', '🎮', '💡', '💰', '🏥', '📚', '✈️', '🏠', '👕', '☕', '🎬', '💻', '🎁', '📱'];
+const CAT_COLORS = ['#2563eb', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16', '#06b6d4'];
 
 function CategoryModal({ cat, onSave, onClose }) {
   const [form, setForm] = useState({
@@ -310,16 +316,16 @@ function TxItem({ tx }) {
   const isCredit = tx.type === 'deposit';
   const isBlocked = tx.status === 'blocked' || ['exploit', 'wipe', 'data_tamper'].includes(tx.type);
   const iconKey = isBlocked ? 'blocked' : (TX_ICONS[tx.type] ? tx.type : 'default');
-  
+
   let catName = 'Giao dịch';
   let catIcon = TX_ICONS[iconKey] || TX_ICONS.default;
   let catColor = '#94a3b8';
-  
+
   if (tx.description?.toLowerCase().includes('mua hàng')) { catName = 'Mua sắm'; catIcon = '🛍️'; catColor = '#fce4ec'; }
   else if (tx.description?.toLowerCase().includes('ăn')) { catName = 'Ăn uống'; catIcon = '🍔'; catColor = '#82ddaf'; }
   else if (tx.description?.toLowerCase().includes('nạp tiền')) { catName = 'Tiết kiệm'; catIcon = '💰'; catColor = '#fbbf24'; }
   else if (tx.description?.toLowerCase().includes('rút tiền')) { catName = 'Ngân hàng'; catIcon = '🏦'; catColor = '#0284c7'; }
-  
+
   if (isBlocked) { catName = 'Bị chặn'; catIcon = '🚫'; catColor = '#e11d48'; }
 
   return (
@@ -365,7 +371,7 @@ function FeedItem({ item }) {
 
 /* ─── Login Page ─── */
 function LoginPage({ onLogin }) {
-  const [email, setEmail] = useState('tranghuyen20051312@gmail.com');
+  const [email, setEmail] = useState('admin@payguard.vn');
   const [password, setPassword] = useState('Admin@123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -381,6 +387,7 @@ function LoginPage({ onLogin }) {
       const data = await res.json();
       if (!res.ok || !data.token) throw new Error(data.message || 'Đăng nhập thất bại');
       localStorage.setItem('token', data.token);
+      localStorage.setItem('userEmail', email);
       onLogin(parseToken(data.token));
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
@@ -408,9 +415,9 @@ function LoginPage({ onLogin }) {
             {loading ? <><div className="pg-spinner" /> Đang đăng nhập...</> : '🔐 Đăng nhập'}
           </button>
         </form>
-        <div className="pg-demo-creds">
-          Demo credentials:<br />
-          Admin: tranghuyen20051312@gmail.com / Admin@123
+        <div className="pg-demo-creds" style={{ fontSize: 13, color: '#9ca3af', marginTop: 16, lineHeight: 1.6 }}>
+          <strong>Admin Role:</strong> admin@payguard.vn / Admin@123<br />
+          <strong>User Role:</strong> user01@payguard.vn / User@123
         </div>
       </div>
     </div>
@@ -462,7 +469,7 @@ function TwoFAPage({ onVerify }) {
           </button>
         </form>
         <div className="pg-demo-creds" style={{ textAlign: 'center' }}>
-          Demo: Nhập <strong>123456</strong> để qua<br/>
+          Demo: Nhập <strong>123456</strong> để qua<br />
           (Nhập sai 3 lần để xem block)
         </div>
       </div>
@@ -480,7 +487,7 @@ function CriticalAlertOverlay({ type, onDismiss, ip }) {
         <div className="pg-critical-icon">{isBlocked ? '🛡' : '⚠'}</div>
         <div className="pg-critical-title">{isBlocked ? 'Tấn Công Bị Chặn' : 'HỆ THỐNG BỊ XÂM NHẬP'}</div>
         <div className="pg-critical-sub">
-          {isBlocked 
+          {isBlocked
             ? 'CyberDef đã phát hiện và chặn đứng kết nối độc hại.'
             : 'Phát hiện truy cập trái phép. Số dư ví đang bị tấn công!'}
         </div>
@@ -507,6 +514,7 @@ export default function App() {
 
   /* security */
   const [isSecurityEnabled, setIsSecurityEnabled] = useState(false);
+  const isSecurityEnabledRef = useRef(false);
   const [securitySaving, setSecuritySaving] = useState(false);
   const [showCodeModal, setShowCodeModal] = useState(false);
 
@@ -516,6 +524,8 @@ export default function App() {
   const [underAttack, setUnderAttack] = useState(false);
   const [riskScore, setRiskScore] = useState(0);
   const [alertOverlay, setAlertOverlay] = useState(null);
+  const [showAvatarMenu, setShowAvatarMenu] = useState(false);
+  const navigate = useNavigate();
 
   /* transfer form */
   const [tForm, setTForm] = useState({ toAccount: '', amount: '', description: '', bank: 'Vietcombank' });
@@ -580,7 +590,9 @@ export default function App() {
     try {
       const res = await fetch(`${API_URL}/api/payguard/status`);
       const data = await res.json();
-      setIsSecurityEnabled(Boolean(data?.securityEnabled));
+      const enabled = Boolean(data?.securityEnabled);
+      setIsSecurityEnabled(enabled);
+      isSecurityEnabledRef.current = enabled;
     } catch { /* ignore */ }
   }, []);
 
@@ -596,6 +608,7 @@ export default function App() {
       });
       if (!res.ok) throw new Error('Failed');
       setIsSecurityEnabled(enable);
+      isSecurityEnabledRef.current = enable;
       if (enable) {
         setShowCodeModal(true);
         setAttackStats({ attempts: 0, blocked: 0, tarpit: 0, stolen: 0 });
@@ -621,13 +634,21 @@ export default function App() {
         }
         if (e.key.toLowerCase() === 'r') {
           e.preventDefault();
-          setWallet(w => ({ ...w, balance: 1000000000 }));
-          persistWallet({ ...wallet, balance: 1000000000 });
+          
+          const token = localStorage.getItem('token');
+          if (token) {
+              fetch(`${API_URL}/api/demo/reset`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+          } else {
+              fetch(`${API_URL}/api/demo/reset-public`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+          }
+
+          setWallet(w => ({ ...w, balance: 5000000000, transactions: [] }));
+          persistWallet({ ...wallet, balance: 5000000000, transactions: [] });
           setAttackStats({ attempts: 0, blocked: 0, tarpit: 0, stolen: 0 });
           setFeedItems([]);
           setRiskScore(0);
           setAlertOverlay(null);
-          toast('Đã reset', 'Khôi phục số dư về 1 Tỷ VNĐ và xóa log tấn công', 'success');
+          toast('Đã reset', 'Khôi phục số dư về 5 Tỷ VNĐ và xóa log tấn công', 'success');
         }
       }
     };
@@ -657,8 +678,9 @@ export default function App() {
         : hasTarpit
           ? `Attempt #${data?.attempt || '?'} — TARPIT delay ${elapsed}`
           : `Attempt #${data?.attempt || '?'} — SUCCESS -${fmtShort(data?.amount || 0)}`;
+      const ip = data?.ip || '10.0.0.77';
 
-      setFeedItems(p => [{ id: Date.now() + Math.random(), type, text, elapsed, ts: new Date(), score }, ...p].slice(0, 40));
+      setFeedItems(p => [{ id: Date.now() + Math.random(), type, text, elapsed, ts: new Date(), score, ip }, ...p].slice(0, 40));
       setRiskScore(score);
       setUnderAttack(true);
       setAttackStats(p => ({
@@ -667,12 +689,12 @@ export default function App() {
         tarpit: p.tarpit + (hasTarpit && !isBlocked ? 1 : 0),
         stolen: p.stolen + (!isBlocked && !hasTarpit ? Number(data?.amount || 0) : 0),
       }));
-      
+
       if (isBlocked) {
         toast('🚫 Giao dịch bị chặn', `Risk Score: ${score} — IP đáng ngờ bị ngăn chặn`, 'danger');
         setAlertOverlay({ type: 'blocked', ip: data.ip || '10.0.0.77' });
-      } else if (!hasTarpit && !isSecurityEnabled) {
-         setAlertOverlay({ type: 'compromised', ip: data.ip || '10.0.0.77' });
+      } else if (!hasTarpit && !isSecurityEnabledRef.current) {
+        setAlertOverlay({ type: 'compromised', ip: data.ip || '10.0.0.77' });
       }
     });
 
@@ -715,7 +737,9 @@ export default function App() {
     });
 
     socket.on('security_status_changed', (data) => {
-      setIsSecurityEnabled(Boolean(data?.enabled));
+      const enabled = Boolean(data?.enabled);
+      setIsSecurityEnabled(enabled);
+      isSecurityEnabledRef.current = enabled;
     });
 
     socket.on('attack_blocked', (data) => {
@@ -724,7 +748,7 @@ export default function App() {
     });
 
     return () => socket.disconnect();
-  }, [toast, fetchWallet, isSecurityEnabled]);
+  }, [toast, fetchWallet]);
 
   /* transfer */
   const handleTransfer = async (e) => {
@@ -733,39 +757,52 @@ export default function App() {
     if (!amount || !tForm.toAccount) return;
     const token = localStorage.getItem('token');
     if (!token) { toast('Cần đăng nhập', 'Vui lòng đăng nhập để thực hiện giao dịch', 'danger'); return; }
-    
-    // Demo effect: If security is off, show money flying away before sending request
-    if (!isSecurityEnabled) {
-      const btn = e.target.querySelector('button[type="submit"]');
-      if (btn) {
-        btn.style.animation = 'shake-violent 0.5s ease';
-        setTimeout(() => { btn.style.animation = ''; }, 500);
-      }
-      
-      // Create flying money element
-      const moneyEl = document.createElement('div');
-      moneyEl.innerText = `-${fmtVND(amount)}`;
-      moneyEl.style.position = 'fixed';
-      moneyEl.style.left = '50%';
-      moneyEl.style.top = '50%';
-      moneyEl.style.transform = 'translate(-50%, -50%)';
-      moneyEl.style.fontSize = '48px';
-      moneyEl.style.fontWeight = 'bold';
-      moneyEl.style.color = '#e11d48';
-      moneyEl.style.zIndex = '9999';
-      moneyEl.style.pointerEvents = 'none';
-      moneyEl.style.fontFamily = 'var(--pg-mono)';
-      moneyEl.style.animation = 'money-fly-away 1.5s ease forwards';
-      document.body.appendChild(moneyEl);
-      setTimeout(() => moneyEl.remove(), 1500);
-      
-      // Delay actual request for dramatic effect
-      setTLoading(true);
-      await new Promise(r => setTimeout(r, 800));
-    } else {
-      setTLoading(true);
+
+    setTLoading(true);
+
+    // Mock Risk Check
+    await new Promise(r => setTimeout(r, 800)); // Simulating CyberDef Middleware check
+    let currentRisk = 12;
+    if (amount >= 50000000) { // If >= 50M, trigger high risk
+      currentRisk = 95;
     }
-    
+
+    if (isSecurityEnabled && currentRisk >= 80) {
+      toast('🚫 Blocked by CyberDef', `Giao dịch bị chặn! Risk Score: ${currentRisk} (High Risk). Nguyên nhân: IP lạ, Thiết bị mới.`, 'danger');
+      setRiskScore(currentRisk);
+      
+      // Inject Security Event for Admin Workspace Demo
+      localStorage.setItem('payguard:latest-risk-event', JSON.stringify({
+        type: "fraud_blocked",
+        user: "user01@payguard.vn",
+        amount: amount,
+        risk: currentRisk,
+        timestamp: new Date().toISOString()
+      }));
+
+      // Add a fake blocked transaction to UI immediately for demo
+      setWallet(w => ({
+        ...w,
+        transactions: [...(w.transactions || []), {
+          _id: Date.now().toString(),
+          type: 'transfer',
+          amount: amount,
+          description: tForm.description || 'Chuyển tiền',
+          status: 'blocked',
+          ipAddress: '45.33.22.1',
+          createdAt: new Date().toISOString()
+        }]
+      }));
+      setTLoading(false);
+      return;
+    }
+
+    // Mock OTP Verification for normal transactions
+    if (amount > 0) {
+      toast('✅ OTP Verified', 'Xác thực OTP thành công', 'success');
+      await new Promise(r => setTimeout(r, 500));
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/payguard/transfer`, {
         method: 'POST',
@@ -774,7 +811,7 @@ export default function App() {
       });
       const data = await res.json();
       if (res.status === 429) toast('🚫 Giao dịch bị tạm dừng', 'Hệ thống phát hiện hoạt động bất thường. Vui lòng thử lại sau.', 'danger');
-      else if (res.ok) { toast('✓ Chuyển tiền thành công', `Đã chuyển ${fmtVND(amount)}`, 'success'); setTForm(f => ({ ...f, amount: '', description: '' })); fetchWallet(); }
+      else if (res.ok) { toast('✓ Chuyển tiền thành công', `Đã chuyển ${fmtVND(amount)}. Risk Score: ${currentRisk} (SAFE)`, 'success'); setTForm(f => ({ ...f, amount: '', description: '' })); fetchWallet(); }
       else toast('Lỗi giao dịch', data.error || 'Vui lòng thử lại', 'danger');
     } catch { toast('Lỗi kết nối', 'Không thể kết nối đến máy chủ', 'danger'); }
     finally { setTLoading(false); }
@@ -852,11 +889,11 @@ export default function App() {
   );
 
   const NAV = [
-    { id: 'dashboard', label: 'Tổng quan', icon: '🏠' },
+    { id: 'dashboard', label: 'Trang chủ', icon: '🏠' },
+    { id: 'wallet', label: 'Ví của tôi', icon: '💳' },
     { id: 'transfer', label: 'Chuyển tiền', icon: '💸' },
-    { id: 'budget', label: 'Ngân sách', icon: '📊' },
-    { id: 'history', label: 'Lịch sử', icon: '📋' },
-    { id: 'settings', label: 'Cài đặt', icon: '⚙️' },
+    { id: 'transactions', label: 'Lịch sử GD', icon: '📋' },
+    { id: 'security', label: 'Bảo mật', icon: '🛡️' },
   ];
   const initLetter = user?.email?.[0]?.toUpperCase() || 'U';
 
@@ -868,33 +905,41 @@ export default function App() {
           <div className="pg-sidebar-logo-icon">🛡</div>
           <div>
             <div className="pg-sidebar-logo-text">PayGuard</div>
-            <div className="pg-sidebar-logo-sub">Secure Wallet</div>
+            <div className="pg-sidebar-logo-sub">Ví Thông Minh</div>
           </div>
         </div>
         <nav className="pg-nav">
-          <div className="pg-nav-section">Menu</div>
+          <div className="pg-nav-section">TÍNH NĂNG</div>
           {NAV.map(n => (
             <button key={n.id} className={`pg-nav-item${page === n.id ? ' active' : ''}`} onClick={() => setPage(n.id)}>
               <span className="nav-icon">{n.icon}</span>{n.label}
             </button>
           ))}
         </nav>
-        
-        {/* Admin Panel Link */}
-        <div style={{ padding: '0 16px', marginTop: '16px', flexShrink: 0 }}>
-          <Link to="/admin/demo" style={{ display: 'block', padding: '12px', background: '#3b82f6', color: '#fff', borderRadius: '8px', textAlign: 'center', fontWeight: 'bold', textDecoration: 'none', transition: 'all 200ms', boxShadow: '0 4px 6px rgba(59, 130, 246, 0.2)' }}>
-            🛡️ Trang Quản Trị
-          </Link>
-        </div>
 
-        <div className="pg-sidebar-footer" style={{ marginTop: 'auto' }}>
-          <div className="pg-user-card" onClick={() => { localStorage.removeItem('token'); setUser(null); }} title="Đăng xuất">
+        <div className="pg-sidebar-footer" style={{ marginTop: 'auto', position: 'relative' }}>
+          <div className="pg-user-card" onClick={() => setShowAvatarMenu(!showAvatarMenu)}>
             <div className="pg-user-avatar">{initLetter}</div>
             <div>
-              <div className="pg-user-name" style={{ maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
-              <div className="pg-user-role">Nhấn để đăng xuất</div>
+              <div className="pg-user-name" style={{ maxWidth: 130, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</span>
+                {user.email === 'admin@payguard.vn' && <span style={{ flexShrink: 0, fontSize: 10, background: '#f59e0b', color: '#fff', padding: '2px 4px', borderRadius: 4, fontWeight: 'bold' }}>ADMIN</span>}
+              </div>
+              <div className="pg-user-role">Tuỳ chọn tài khoản</div>
             </div>
           </div>
+          {showAvatarMenu && (
+            <div style={{ position: 'absolute', bottom: '100%', left: 16, right: 16, marginBottom: 8, background: '#1e293b', borderRadius: 8, overflow: 'hidden', border: '1px solid #334155', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)', zIndex: 100 }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid #334155', color: '#fff', fontSize: 14, cursor: 'pointer' }} onClick={() => { setShowAvatarMenu(false); alert('Tính năng Profile đang phát triển'); }}>Hồ sơ cá nhân</div>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid #334155', color: '#fff', fontSize: 14, cursor: 'pointer' }} onClick={() => { setShowAvatarMenu(false); setPage('security'); }}>Bảo mật</div>
+              {user.email === 'admin@payguard.vn' && (
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid #334155', color: '#3b82f6', fontSize: 14, cursor: 'pointer', fontWeight: 'bold' }} onClick={() => navigate('/admin/overview')}>
+                  Chuyển sang trang Quản trị Admin
+                </div>
+              )}
+              <div style={{ padding: '12px 16px', color: '#ef4444', fontSize: 14, cursor: 'pointer' }} onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('userEmail'); setUser(null); setShowAvatarMenu(false); }}>Đăng xuất</div>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -903,7 +948,12 @@ export default function App() {
         {/* Topbar */}
         <header className="pg-topbar">
           <div className="pg-topbar-title">{NAV.find(n => n.id === page)?.label || 'PayGuard'}</div>
-          
+
+          {/* Workspace Indicator */}
+          <div style={{ marginLeft: 16, padding: '6px 12px', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', borderRadius: 6, fontWeight: 600, fontSize: 13, border: '1px solid rgba(59,130,246,0.2)' }}>
+            🏦 Giao diện Khách hàng PayGuard
+          </div>
+
           {/* Demo Banner */}
           <div style={{
             margin: '0 auto',
@@ -916,14 +966,14 @@ export default function App() {
             border: `1px solid ${isSecurityEnabled ? 'rgba(52,211,153,0.2)' : 'rgba(248,113,113,0.2)'}`,
             animation: !isSecurityEnabled ? 'pulse-danger 2s infinite' : 'none'
           }}>
-            {isSecurityEnabled ? '🛡️ PROTECTED - CyberDef Active' : '⚠️ UNPROTECTED - Hệ thống không có tường lửa'}
+            {isSecurityEnabled ? '🛡️ ĐÃ BẢO VỆ - CyberDef Đang Hoạt Động' : '⚠️ KHÔNG BẢO VỆ - Hệ thống không có tường lửa'}
           </div>
 
           <div className="pg-topbar-right">
             <button className="pg-icon-btn" onClick={() => setPage('settings')}>
               🔔
             </button>
-            <div className="pg-user-avatar" style={{ width: 36, height: 36, cursor: 'pointer' }} onClick={() => { localStorage.removeItem('token'); setUser(null); }}>{initLetter}</div>
+            <div className="pg-user-avatar" style={{ width: 36, height: 36, cursor: 'pointer' }} onClick={() => setShowAvatarMenu(!showAvatarMenu)}>{initLetter}</div>
           </div>
         </header>
 
@@ -937,11 +987,11 @@ export default function App() {
               <div className="pg-hero-scan" />
               <div className="pg-hero-inner">
                 <div className="pg-hero-top">
-                  <div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="pg-hero-label">Số dư khả dụng</div>
-                    <div className={`pg-balance${balDir ? ` ${balDir}` : ''}`}>{fmtVND(displayBalance)}</div>
+                    <div className={`pg-balance${balDir ? ` ${balDir}` : ''}`} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtVND(displayBalance)}</div>
                   </div>
-                  <div className="pg-hero-acct">📄 {wallet?.accountNumber || 'PAY-XXXXXXXX'}</div>
+                  <div className="pg-hero-acct" style={{ flexShrink: 0 }}>📄 {wallet?.accountNumber || 'PAY-XXXXXXXX'}</div>
                 </div>
                 <div className="pg-hero-bank">
                   <div className="pg-bank-badge">{wallet?.bankName || 'Vietcombank'}</div>
@@ -1015,7 +1065,7 @@ export default function App() {
                     <div className="pg-panel-title">Giao dịch gần đây</div>
                     <div className="pg-panel-sub">{transactions.length} giao dịch</div>
                   </div>
-                  <button className="pg-badge muted" style={{ cursor: 'pointer' }} onClick={() => setPage('history')}>Xem tất cả →</button>
+                  <button className="pg-badge muted" style={{ cursor: 'pointer' }} onClick={() => setPage('transactions')}>Xem tất cả →</button>
                 </div>
                 <div className="pg-tx-list">
                   {transactions.slice(0, 5).map((tx, i) => <TxItem key={tx._id || i} tx={tx} />)}
@@ -1094,30 +1144,22 @@ export default function App() {
             </div>
           )}
 
-          {/* ════ HISTORY ════ */}
-          {page === 'history' && (
-            <div className="pg-panel pg-shadow-md pg-hover-elevate">
-              <div className="pg-panel-header">
-                <div><div className="pg-panel-title">Lịch sử giao dịch</div><div className="pg-panel-sub">{filteredTx.length} giao dịch</div></div>
-              </div>
-              <div style={{ display: 'grid', gap: 14 }}>
-                <div className="pg-filter-tabs">
-                  {[['all', 'Tất cả'], ['deposit', 'Nạp tiền'], ['transfer', 'Chuyển tiền'], ['withdraw', 'Rút tiền'], ['blocked', 'Bị chặn']].map(([f, l]) => (
-                    <button key={f} className={`pg-filter-tab${histFilter === f ? ` active${f === 'blocked' ? ' danger-tab' : ''}` : ''}`} onClick={() => setHistFilter(f)}>{l}</button>
-                  ))}
-                </div>
-                <div className="pg-search-wrap">
-                  <span className="pg-search-icon">🔍</span>
-                  <input className="pg-search-input" placeholder="Tìm theo mô tả..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-                </div>
-                <div className="pg-tx-list">
-                  {filteredTx.length > 0
-                    ? filteredTx.map((tx, i) => <TxItem key={tx._id || i} tx={tx} />)
-                    : <div className="pg-empty"><div className="pg-empty-icon">🔍</div><div className="pg-empty-title">Không tìm thấy giao dịch</div><div className="pg-empty-sub">Thử thay đổi bộ lọc</div></div>
-                  }
-                </div>
-              </div>
-            </div>
+          {/* ════ HISTORY -> TRANSACTIONS ════ */}
+          {page === 'transactions' && (
+            <TransactionsPage transactions={transactions} />
+          )}
+
+          {/* ════ WALLET ════ */}
+          {page === 'wallet' && (
+            <UserWalletPage wallet={wallet} fmtVND={fmtVND} />
+          )}
+
+          {/* ════ SECURITY ════ */}
+          {page === 'security' && (
+            <UserSecurityPage
+              isSecurityEnabled={isSecurityEnabled}
+              riskScore={riskScore}
+            />
           )}
 
           {/* ════ BUDGET ════ */}
@@ -1248,7 +1290,7 @@ export default function App() {
 
       {/* Code Shield Modal */}
       {showCodeModal && <CodeShieldModal onClose={() => setShowCodeModal(false)} />}
-      
+
       {/* Category Modal */}
       {catModal && (
         <CategoryModal
@@ -1281,7 +1323,7 @@ export default function App() {
 
       {/* Toasts */}
       <ToastStack toasts={toasts} />
-      
+
       {/* Hidden Admin Toggles */}
       <div style={{ position: 'fixed', bottom: '10px', right: '10px', opacity: 0.05, display: 'flex', gap: '4px', zIndex: 99999 }}>
         <button style={{ width: '20px', height: '20px', background: 'red', borderRadius: '50%', cursor: 'pointer' }} onClick={() => toggleSecurity(!isSecurityEnabled)} title="Toggle CyberDef" />

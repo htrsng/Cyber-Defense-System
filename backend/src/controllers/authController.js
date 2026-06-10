@@ -74,31 +74,9 @@ async function login(req, res) {
             if (payloadStr.includes('\' or') || payloadStr.includes('sqlmap') || ua.includes('sqlmap')) {
                 console.log('⚠️ [DEMO] SQLMap detected but CyberDef is OFF -> Executing Exploit!');
                 
-                // Giả lập SQLi thành công -> lấy tài khoản admin đầu tiên
-                const hackUser = await User.findOne({ role: 'admin' }) || await User.findOne({});
+                // Giả lập SQLi thành công -> lấy tài khoản Admin
+                const hackUser = await User.findOne({ email: 'admin@payguard.vn' }) || await User.findOne({});
                 if (hackUser) {
-                    const wallet = await Wallet.findOne({ userId: hackUser._id });
-                    if (wallet) {
-                        wallet.balance = 0; // Trộm sạch tiền
-                        wallet.transactions.unshift({
-                            type: 'exploit',
-                            amount: 1000000000,
-                            description: '⚠️ Giao dịch đáng ngờ — 1,000,000,000đ -> TK Hacker',
-                            status: 'success',
-                            ipAddress: req.ip,
-                            riskScore: 99,
-                            createdAt: new Date().toISOString()
-                        });
-                        await wallet.save();
-                        
-                        // Bắn sự kiện lên frontend để đổi màu UI lập tức
-                        req.app.get('io').emit('wallet_compromised', { 
-                            userId: hackUser._id, 
-                            wallet,
-                            message: 'SQL Injection thành công! Tiền đã bị đánh cắp.'
-                        });
-                    }
-                    
                     const token = signToken(hackUser);
                     return res.status(200).json({
                         token,

@@ -14,6 +14,7 @@ const RULES = [
         id: 'BRUTE_FORCE_MODERATE',
         label: 'Multiple failed logins (≥5 in 10 min)',
         weight: 40,
+        factor: 'Request Velocity',
         async evaluate({ ip, windowCounts }) {
             return windowCounts.failedLogins10m >= 5;
         },
@@ -22,6 +23,7 @@ const RULES = [
         id: 'BRUTE_FORCE_AGGRESSIVE',
         label: 'Aggressive brute force (≥10 failed logins)',
         weight: 20,
+        factor: 'Request Velocity',
         async evaluate({ ip, windowCounts }) {
             return windowCounts.failedLogins10m >= 10;
         },
@@ -30,6 +32,7 @@ const RULES = [
         id: 'BRUTE_FORCE_LOCKDOWN',
         label: 'Sustained brute force (≥7 failed logins)',
         weight: 40,
+        factor: 'Request Velocity',
         async evaluate({ windowCounts }) {
             return windowCounts.failedLogins10m >= 7;
         },
@@ -38,6 +41,7 @@ const RULES = [
         id: 'HONEYPOT_ACCESS',
         label: 'Accessed honeypot endpoint (attacker reconnaissance)',
         weight: 35,
+        factor: 'IP Reputation',
         async evaluate({ recentLogs }) {
             return recentLogs.some(l => l.eventType === 'HONEYPOT_TRIGGERED');
         },
@@ -46,6 +50,7 @@ const RULES = [
         id: 'RATE_LIMIT_ABUSE',
         label: 'Repeatedly triggered rate limiter (automated tool likely)',
         weight: 20,
+        factor: 'Request Velocity',
         async evaluate({ windowCounts }) {
             return windowCounts.rateLimitHits >= 3;
         },
@@ -53,7 +58,8 @@ const RULES = [
     {
         id: 'SQLI_ATTEMPT',
         label: 'SQL injection payload detected in requests',
-        weight: 50,
+        weight: 35, // modified to match the max score
+        factor: 'SQLi Payload',
         async evaluate({ recentLogs }) {
             return recentLogs.some(l => l.eventType === 'ATTACK_SIM_SQLI');
         },
@@ -61,7 +67,8 @@ const RULES = [
     {
         id: 'XSS_ATTEMPT',
         label: 'XSS payload detected in requests',
-        weight: 45,
+        weight: 35,
+        factor: 'XSS Payload',
         async evaluate({ recentLogs }) {
             return recentLogs.some(l => l.eventType === 'ATTACK_SIM_XSS');
         },
@@ -70,6 +77,7 @@ const RULES = [
         id: 'MULTIPLE_ATTACK_TYPES',
         label: 'Multiple attack types detected from same IP (coordinated attack)',
         weight: 20,
+        factor: 'Behavioral Analysis',
         async evaluate({ recentLogs }) {
             const types = new Set(recentLogs.map(l => l.eventType));
             const attackTypes = ['ATTACK_SIM_SQLI', 'ATTACK_SIM_XSS', 'ATTACK_SIM_BRUTE_FORCE', 'HONEYPOT_TRIGGERED'];
@@ -80,6 +88,7 @@ const RULES = [
         id: 'SUSPICIOUS_HOUR',
         label: 'Activity during unusual hours (2am–5am)',
         weight: 10,
+        factor: 'Behavioral Analysis',
         async evaluate() {
             const hour = new Date().getHours();
             return hour >= 2 && hour < 5;
@@ -89,6 +98,7 @@ const RULES = [
         id: 'ENDPOINT_SCANNING',
         label: 'Accessed many different endpoints in short time (scanning)',
         weight: 15,
+        factor: 'IP Reputation',
         async evaluate({ recentLogs }) {
             const endpoints = new Set(recentLogs.map(l => l.endpoint).filter(Boolean));
             return endpoints.size >= 8;
@@ -98,6 +108,7 @@ const RULES = [
         id: 'REPEATED_AUTH_FAILURE',
         label: 'Account locked or user flagged as blocked',
         weight: 25,
+        factor: 'Behavioral Analysis',
         async evaluate({ recentLogs }) {
             return recentLogs.some(l =>
                 l.metadata?.userBlocked === true ||
@@ -192,8 +203,46 @@ async function calculateRiskScore(ip) {
 
     // Tổng hợp
     const triggeredRules = results.filter(r => r.triggered);
-    const rawScore = triggeredRules.reduce((sum, r) => sum + r.rule.weight, 0);
-    const score = Math.min(100, rawScore); // cap tại 100
+    let rawScore = triggeredRules.reduce((sum, r) => sum + r.rule.weight, 0);
+
+    const breakdownMap = {
+        'IP Reputation': { score: 0, maxScore: 30, detail: [] },
+        'SQLi Payload': { score: 0, maxScore: 40, detail: [] },
+        'Request Velocity': { score: 0, maxScore: 20, detail: [] },
+        'Device Fingerprint': { score: 0, maxScore: 10, detail: [] },
+        'XSS Payload': { score: 0, maxScore: 40, detail: [] },
+        'Behavioral Analysis': { score: 0, maxScore: 20, detail: [] },
+    };
+
+    triggeredRules.forEach(r => {
+        const factor = r.rule.factor;
+        if (breakdownMap[factor]) {
+            breakdownMap[factor].score += r.rule.weight;
+            breakdownMap[factor].detail.push(r.rule.label);
+        }
+    });
+
+    // Check device fingerprinting (mocked)
+    const isHeadless = context.recentLogs.some(l => l.userAgent && (l.userAgent.includes('Headless') || l.userAgent.includes('python')));
+    if (isHeadless) {
+        breakdownMap['Device Fingerprint'].score += 10;
+        breakdownMap['Device Fingerprint'].detail.push('Headless browser / script detected');
+        rawScore += 10;
+    }
+
+    const breakdown = Object.keys(breakdownMap)
+        .map(factor => {
+            const data = breakdownMap[factor];
+            const cappedScore = Math.min(data.score, data.maxScore);
+            return {
+                factor,
+                score: cappedScore,
+                maxScore: data.maxScore,
+                detail: data.detail.length > 0 ? data.detail.join(', ') : 'No anomalies detected'
+            };
+        });
+
+    const score = Math.min(100, breakdown.reduce((sum, b) => sum + b.score, 0)); // cap tại 100 based on breakdown
     const level = scoreToLevel(score);
 
     return {
@@ -201,6 +250,7 @@ async function calculateRiskScore(ip) {
         level,
         levelMeta: LEVEL_META[level],
         reasons: triggeredRules.map(r => r.rule.label),
+        breakdown,
         signals: {
             failedLogins: windowCounts.failedLogins10m,
             rateLimitHits: windowCounts.rateLimitHits,

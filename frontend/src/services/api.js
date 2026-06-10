@@ -78,3 +78,29 @@ export const adminAPI = {
     testEmail: () => api.post('/api/admin/test-email'),
     sendDailyReport: () => api.post('/api/admin/daily-report'),
 };
+
+export const tenantsAPI = {
+    getAll: () => api.get('/api/tenants'),
+    getById: (id) => api.get(`/api/tenants/${id}`),
+    getStats: (id) => api.get(`/api/tenants/${id}/stats`),
+    update: (id, data) => api.patch(`/api/tenants/${id}`, data)
+};
+
+export const policiesAPI = {
+    getAll: () => api.get('/api/policies'),
+    getStats: () => api.get('/api/policies/stats'),
+    getById: (id) => api.get(`/api/policies/${id}`),
+    update: (id, data) => api.patch(`/api/policies/${id}`, data)
+};
+
+export const analyticsAPI = {
+    getAttacks: () => api.get('/api/analytics/attacks'),
+    getFraud: () => api.get('/api/analytics/fraud'),
+    getOverview: () => api.get('/api/analytics/overview')
+};
+
+export const pricingAPI = {
+    getPlans: () => api.get('/api/pricing/plans'),
+    getCompare: () => api.get('/api/pricing/compare'),
+    upgrade: (data) => api.post('/api/pricing/upgrade', data)
+};
