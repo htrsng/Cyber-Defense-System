@@ -3,6 +3,7 @@
 # ◈ CYBERDEF
 ### AI-Powered Cyber Defense & Threat Monitoring System
 
+![Build](https://img.shields.io/badge/build-passing-brightgreen?style=for-the-badge)
 ![Version](https://img.shields.io/badge/version-1.0.0-00d4ff?style=for-the-badge)
 ![Node](https://img.shields.io/badge/Node.js-20-339933?style=for-the-badge&logo=node.js)
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
@@ -38,7 +39,7 @@
 
 ## 🎯 Giới thiệu
 
-**CyberDef** là hệ thống giám sát an ninh mạng được xây dựng cho môn **Bảo mật Ứng dụng và Hệ thống**. Hệ thống mô phỏng môi trường bảo mật thực tế với đầy đủ các lớp tấn công và phòng thủ.
+**CyberDef** là hệ thống giám sát an ninh mạng thời gian thực. Hệ thống **simulates a real-world SOC environment with layered defenses, real-time threat detection, and automated response.**
 
 ### Vấn đề đặt ra
 
@@ -55,6 +56,12 @@ Tấn công đến ──▶ Phát hiện (AI) ──▶ Phân tích (Risk Score
 ---
 
 ## 🎬 Demo
+
+![Dashboard Screenshot](/media/dashboard.png)
+*(Screenshot: Bảng điều khiển CyberDef giám sát và ngăn chặn các cuộc tấn công thời gian thực)*
+
+![Attack Demo GIF](/media/attack_demo.gif)
+*(GIF: Attacker terminal vs Defender dashboard - Ngăn chặn Brute Force)*
 
 ### Split-screen Demo (Attacker vs Defender)
 
@@ -213,6 +220,21 @@ Controller Logic
       └──▶ Response to attacker
 ```
 
+### Data Flow: Xác thực 2 bước (2FA TOTP)
+
+```text
+User (Client) ──▶ Nhập Email/Pass ──▶ API /login
+                                       │
+                                       ▼
+Server ──▶ Validate & Trả về yêu cầu 2FA (token tạm thời)
+                                       │
+                                       ▼
+User (Client) ──▶ Nhập mã TOTP (từ app) ──▶ API /2fa/validate
+                                       │
+                                       ▼
+Server ──▶ Xác thực TOTP ──▶ Trả về JWT Access Token chính
+```
+
 ---
 
 ## 🛠 Tech Stack
@@ -302,6 +324,21 @@ npm install
 npm run seed
 ```
 
+### 6. Xử lý sự cố (Troubleshooting)
+
+Nếu dịch vụ không lên (thường do xung đột port `5000` hoặc `27017`):
+
+```bash
+# Xem logs chi tiết để biết lỗi
+docker compose logs backend
+
+# Nếu port bị chiếm, tắt các container cũ
+docker compose down -v
+
+# Hoặc đổi port trong .env và docker-compose.yml rồi chạy lại
+docker compose up -d --build
+```
+
 ### 6. Truy cập hệ thống
 
 | Service | URL | Thông tin |
@@ -313,7 +350,7 @@ npm run seed
 ### 7. Đăng nhập
 
 ```
-Email:    tranghuyen20051312@gmail.com
+Email:    admin@cyberdef.io
 Password: Admin@123
 Role:     Admin
 ```
@@ -456,6 +493,8 @@ Các attack script được dùng:
 ---
 
 ## 📡 API Reference
+
+> 💡 **Lưu ý:** Tất cả các endpoint dưới đây yêu cầu Header `Authorization: Bearer <token>` trừ những endpoint ghi rõ (public).
 
 ### Authentication
 
@@ -636,8 +675,7 @@ GET /api/health
 Response: { "status": "ok", "ts": "2024-01-01T12:00:00.000Z" }
 
 # Real-time Activity Logs (via WebSocket)
-# Note: GET /api/logs is not yet fully implemented
-# Use WebSocket connection to listen for real-time activity_log events instead
+# Lắng nghe sự kiện qua Socket.io:
 # Event: activity_log → { ipAddress, eventType, severity, description, timestamp }
 ```
 
@@ -705,17 +743,15 @@ Normal users      → Không bị ảnh hưởng
 ### Cách hoạt động
 
 ```javascript
-// Ví dụ output
 {
   "ip": "10.0.0.99",
   "score": 100,
   "level": "critical",
   "reasons": [
-    "Multiple failed logins (≥5 in 10 min)",      // +40
-    "Aggressive brute force (≥10 failed logins)",  // +20
-    "Accessed honeypot endpoint",                  // +35
-    "SQL injection payload detected"               // +50
-    // Total: 145 → capped at 100
+    "Multiple failed logins (≥5 in 10 min)",
+    "Aggressive brute force (≥10 failed logins)",
+    "Accessed honeypot endpoint",
+    "SQL injection payload detected"
   ],
   "signals": {
     "failedLogins": 15,
@@ -725,6 +761,7 @@ Normal users      → Không bị ảnh hưởng
   }
 }
 ```
+*(Ghi chú: Điểm tổng của các reasons trên là 145, nhưng score được capped ở mức tối đa là 100)*
 
 ### Tại sao Rule-based thay vì ML?
 
@@ -800,15 +837,6 @@ cyber-defense/
     ├── Dockerfile
     ├── package.json
     ├── README.md
-    ├── build/                     ← Production build output
-    │   ├── asset-manifest.json
-    │   ├── index.html
-    │   └── static/
-    │       ├── css/
-    │       │   └── main.0d98f757.css
-    │       └── js/
-    │           ├── main.b307540d.js
-    │           └── main.b307540d.js.LICENSE.txt
     ├── public/
     │   └── index.html
     └── src/
@@ -874,22 +902,27 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 
 ## 🔒 Bảo mật Production
 
-Trước khi deploy production, đảm bảo:
+Để đưa CyberDef lên môi trường Production an toàn, vui lòng thực hiện các bước sau:
 
+### 1. Quản lý Secret & Credentials
+Không sử dụng thông tin mặc định trong `.env`.
 ```bash
-# 1. Đổi tất cả passwords mặc định trong .env
-JWT_SECRET=<64 random chars>
-MONGO_PASSWORD=<strong password>
-REDIS_PASSWORD=<strong password>
-
-# 2. Giới hạn CORS
-FRONTEND_URL=https://your-domain.com
-
-# 3. Bật HTTPS (nginx + Let's Encrypt)
-# 4. Set NODE_ENV=production
-# 5. Remove /api/xss/vulnerable endpoint
-# 6. Disable MongoDB port exposure (27017)
+JWT_SECRET=<64_random_chars> # Chống bẻ khóa JWT bằng brute-force
+MONGO_PASSWORD=<strong_password> # Tránh lộ dữ liệu nếu DB bị expose
+REDIS_PASSWORD=<strong_password> # Bảo vệ Redis cache
 ```
+
+### 2. Giới hạn Cross-Origin (CORS)
+Thiết lập `FRONTEND_URL` trỏ chính xác về domain của bạn (ví dụ `https://your-domain.com`) thay vì `*`. Điều này ngăn chặn các trang web độc hại nhúng API của bạn và thực hiện tấn công CSRF hoặc đánh cắp dữ liệu.
+
+### 3. Tắt các Endpoint nội bộ / Demo
+Trong môi trường thực tế, bạn cần đóng hoặc xóa các API dùng để demo (như `/api/xss/vulnerable` hoặc các endpoint `simulate`). Hacker có thể dùng các endpoint này để bypass bảo mật hoặc phá hoại hệ thống.
+
+### 4. Triển khai HTTPS (TLS/SSL)
+Mọi dữ liệu truyền tải (bao gồm Token, Password) ở dạng Plain HTTP rất dễ bị sniff. Hãy chạy hệ thống qua một Reverse Proxy (như Nginx, Caddy hoặc Cloudflare) và cấu hình chứng chỉ Let's Encrypt.
+
+### 5. Che dấu Database
+Chỉ expose cổng `5000` (Backend) ra Internet. Cổng `27017` (MongoDB) và `6379` (Redis) chỉ nên được bind vào `localhost` hoặc mạng nội bộ Docker network để tránh bị tấn công trực tiếp vào DB.
 
 ---
 
